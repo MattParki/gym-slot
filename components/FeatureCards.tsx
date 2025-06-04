@@ -16,7 +16,7 @@ export const FeatureCards: React.FC<FeatureCardsProps> = ({ isDarkBackground = f
   const featureCards: FeatureCard[] = [
     {
       title: "Easy Slot Booking",
-      description: "Reserve your gym sessions in just a few taps. No more waiting or uncertainty—secure your spot instantly.",
+      description: "Reserve your gym sessions in just a few taps. No more waiting or uncertainty - secure your spot instantly.",
       gradientFrom: "from-green-400",
       gradientTo: "to-blue-500",
       icon: <CalendarCheck className="h-6 w-6 text-white" />
