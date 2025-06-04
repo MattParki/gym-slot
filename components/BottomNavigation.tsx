@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useAuth } from "@/contexts/AuthContext"
 import { usePathname } from "next/navigation"
-import { Home, Users, LogOut, LogIn, UserPlus, Settings } from "lucide-react"
+import { Home, CalendarCheck, LogOut, LogIn, UserPlus, Settings } from "lucide-react"
 
 export default function BottomNavigation() {
   const { user, logout } = useAuth()
@@ -46,12 +46,12 @@ export default function BottomNavigation() {
             </Link>
 
             <Link 
-              href="/clients" 
+              href="/bookings" 
               className="relative flex flex-col items-center justify-center w-full h-full"
             >
-              {getActiveIndicator('/clients')}
-              <Users className={`h-6 w-6 ${getActiveTab('/clients')}`} />
-              <span className={`text-xs mt-1 ${getActiveTab('/clients')}`}>Clients</span>
+              {getActiveIndicator('/bookings')}
+              <CalendarCheck className={`h-6 w-6 ${getActiveTab('/bookings')}`} />
+              <span className={`text-xs mt-1 ${getActiveTab('/bookings')}`}>Bookings</span>
             </Link>
 
             <Link

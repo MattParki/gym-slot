@@ -54,7 +54,6 @@ export async function getBusiness(userId: string): Promise<Business | null> {
       id: businessDoc.id,
       companyName: businessData.companyName || "",
       contactInfo: businessData.contactInfo || "",
-      specialty: businessData.specialty || "",
       email: businessData.email || "",
       owners: businessData.owners || [],
       members: businessData.members || [],

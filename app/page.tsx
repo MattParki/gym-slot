@@ -2,14 +2,12 @@
 
 import LayoutWrapper from "@/components/LayoutWrapper"
 import Link from "next/link"
-import { PlusCircle, LogIn, FileText } from "lucide-react"
+import { PlusCircle, LogIn, CalendarCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { useState, useEffect } from "react"
 import { getUserProfile } from "@/services/userService"
 import FeatureCards from "@/components/FeatureCards"
-import GetStartedGuide from "@/components/GetStartedGuide"
-import EmailDomainSetupGuide from "@/components/EmailDomainSetupGuide"
 import DailyMessage from "@/components/DailyMessage"
 
 export default function Home() {
@@ -47,16 +45,16 @@ export default function Home() {
             <div className="bg-[#141E33] text-white rounded-lg">
               <div className="container mx-auto px-8 py-8 md:py-8">
                 <h1 className="text-4xl md:text-4xl font-bold mb-4">
-                  Generate a proposal instantly
+                  Effortless Gym Booking Starts Here
                 </h1>
                 <p className="text-lg md:text-xl text-white/80 mb-8">
-                  Create professional proposals in minutes with our AI-powered tool
+                  Book your gym sessions in seconds. Manage your workout schedule and never miss a slot with Gym Slot.
                 </p>
 
                 <Link href="/login">
                   <Button className="bg-white text-[#141E33] hover:bg-white/90">
                     <LogIn className="h-5 w-5 mr-2" />
-                    Sign in to turn prospects into wins
+                    Sign in to Book a Slot
                   </Button>
                 </Link>
               </div>
@@ -68,8 +66,8 @@ export default function Home() {
             {/* CTA for non-logged in */}
             <div className="container mx-auto px-4 pb-12 flex justify-center">
               <Link href="/signup">
-                <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg shadow-lg font-medium transition-all hover:shadow-xl">
-                  Sign Up for Free
+                <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 rounded-lg shadow-lg font-medium transition-all hover:shadow-xl">
+                  Get Started Free
                 </Button>
               </Link>
             </div>
@@ -81,49 +79,32 @@ export default function Home() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold">
-                    Hi {greeting}, <span className="text-indigo-500">Happy {dayOfWeek}!</span>
+                    Welcome back, {greeting}! <span className="text-green-500">Happy {dayOfWeek}!</span>
                   </h1>
                   <DailyMessage day={dayOfWeek} />
                 </div>
 
                 <div className="mt-4 md:mt-0">
-                  <Link href="/create-proposal">
-                    <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-md font-medium transition-all hover:shadow-lg w-full md:w-auto">
+                  <Link href="/book-slot">
+                    <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg shadow-md font-medium transition-all hover:shadow-lg w-full md:w-auto">
                       <PlusCircle className="h-5 w-5 mr-2" />
-                      Create New Proposal
+                      Book a Gym Slot
                     </Button>
                   </Link>
                 </div>
-                {/* My Proposals Link - mobile only */}
+                {/* My Bookings Link - mobile only */}
                 <div className="md:hidden">
-                  <Link href="/my-proposals">
+                  <Link href="/my-bookings">
                     <Button
                       variant="outline"
                       className="w-full flex items-center justify-center gap-2 text-sm"
                     >
-                      <FileText className="h-5 w-5" />
-                      My Proposals
+                      <CalendarCheck className="h-5 w-5" />
+                      My Bookings
                     </Button>
                   </Link>
                 </div>
               </div>
-            </div>
-
-            {/* Dashboard content with guides */}
-            <div className="container mx-auto px-4">
-              <div className="space-y-6 py-4">
-                {/* Get Started Guide */}
-                {user && <GetStartedGuide />}
-
-                {/* Email Domain Setup Guide */}
-                {user && <EmailDomainSetupGuide />}
-              </div>
-            </div>
-
-
-            {/* Empty space where future dashboard content will go */}
-            <div className="container mx-auto px-4 py-4 flex-grow">
-              {/* Future dashboard content will go here */}
             </div>
           </>
         )}

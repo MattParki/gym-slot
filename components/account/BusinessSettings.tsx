@@ -46,20 +46,16 @@ export default function BusinessSettings() {
           if (business) {
             setBusinessId(business.id);
             setBusinessEmail(business.email || "");
-            // Extract domain from email
             if (business.email) {
               const domain = business.email.split('@')[1];
               setEmailDomain(domain || "");
             }
             setMembers(business.members || []);
-            // Set company info
             setCompanyName(business.companyName || "");
             setContactInfo(business.contactInfo || "");
-            setSpecialty(business.specialty || "");
           }
           setInitialLoading(false);
         } catch (error) {
-          console.error("Error fetching business data:", error);
           toast.error("Failed to load business data.");
           setInitialLoading(false);
         }
@@ -80,19 +76,15 @@ export default function BusinessSettings() {
         members,
         companyName,
         contactInfo,
-        specialty
       });
 
       toast.success("Business settings have been updated.");
     } catch (error) {
-      console.error("Error updating business:", error);
       toast.error("Failed to update business settings. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const handleAddMember = async () => {
     if (!businessId || !newMemberEmail.trim()) return;
@@ -113,7 +105,6 @@ export default function BusinessSettings() {
 
       toast.success(`${newMemberEmail} has been added and invited.`);
     } catch (error) {
-      console.error("Error adding/inviting member:", error);
       toast.error("Failed to add or invite member.");
     } finally {
       setLoading(false);
@@ -126,15 +117,12 @@ export default function BusinessSettings() {
 
     try {
       setLoading(true);
-      // Remove member from the business
       await removeBusinessMember(businessId, memberId);
 
-      // Update local state
       setMembers(members.filter(member => member.id !== memberId));
 
       toast.success("Member has been removed from your business.");
     } catch (error) {
-      console.error("Error removing member:", error);
       toast.error("Failed to remove member. Please try again.");
     } finally {
       setLoading(false);
@@ -173,11 +161,6 @@ export default function BusinessSettings() {
               className="bg-muted cursor-not-allowed"
               placeholder="business@example.com"
             />
-            {emailDomain && (
-              <p className="text-sm text-muted-foreground mt-1">
-                Users at your company can use @{emailDomain} domain
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -245,24 +228,8 @@ export default function BusinessSettings() {
               placeholder="Your Contact Information (Website, Address, etc.)"
               disabled={loading}
             />
-            <p className="text-sm text-muted-foreground">
-              Additional contact details to display in proposals (website, address, etc.)
-            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="specialty">Business Specialty</Label>
-            <Input
-              id="specialty"
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-              placeholder="Your Primary Business Specialty"
-              disabled={loading}
-            />
-            <p className="text-sm text-muted-foreground">
-              Will be used in proposals to describe your services
-            </p>
-          </div>
         </TabsContent>
       </Tabs>
 

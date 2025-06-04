@@ -59,24 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userCredential;
   }
   
-
   async function login(email: string, password: string) {
-    const environment = process.env.NEXT_PUBLIC_ENVIRONMENT;
-  
-    // Restrict access only if not in the demo environment
-    if (environment !== "demo") {
-      const allowedEmails = [
-        "mattparkinson_12@hotmail.com",
-        "mikel@prospectseasy.com",
-        "prospectseasy@hotmail.com"
-      ];
-  
-      if (!allowedEmails.includes(email)) {
-        throw new Error(
-          "Access denied. Please register for the demo at https://proposal-ai-demo.vercel.app/"
-        );
-      }
-    }
   
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -124,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       return userCredential;
     } catch (error) {
-      // If there's an error in the API call, we might want to delete the user to avoid orphaned accounts
       if (auth.currentUser) {
         await auth.currentUser.delete();
       }

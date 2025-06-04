@@ -5,7 +5,6 @@ export interface UserProfile {
   role: string;
   industry: string;
   companySize: string;
-  specializations: string[];
   businessId?: string;
   onboardingCompleted: boolean;
   createdAt: string;
@@ -13,13 +12,7 @@ export interface UserProfile {
 }
 
 export const roleOptions = [
-  { value: 'sales-rep', label: 'Sales Rep' },
-  { value: 'account-executive', label: 'Account Executive' },
-  { value: 'head-of-sales', label: 'Head of Sales' },
   { value: 'business-owner', label: 'Business Owner' },
-  { value: 'marketing-manager', label: 'Marketing Manager' },
-  { value: 'freelancer', label: 'Freelancer/Consultant' },
-  { value: 'other', label: 'Other' },
 ];
 
 export const companySizeOptions = [

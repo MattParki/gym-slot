@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
-import { FileText } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
 
 export default function Navigation() {
   const { user, logout } = useAuth();
@@ -25,8 +25,8 @@ export default function Navigation() {
         {/* Logo */}
         <div className="flex items-center gap-2 font-bold text-xl">
           <Link href="/" className="flex items-center">
-            <FileText className="h-6 w-6 mr-2" />
-            <span>ProspectsEasy</span>
+            <CalendarCheck className="h-6 w-6 mr-2" />
+            <span>Gym Slot</span>
           </Link>
         </div>
 
@@ -38,23 +38,26 @@ export default function Navigation() {
           >
             Home
           </Link>
-
+          <Link
+            href="/bookings"
+            className="text-sm font-medium hover:text-white/80 transition-colors"
+          >
+            Bookings
+          </Link>
           {user ? (
             <>
               <Link
-                href="/my-proposals"
+                href="/account-settings"
                 className="text-sm font-medium hover:text-white/80 transition-colors"
               >
-                My Proposals
+                Account
               </Link>
-
               <button
                 onClick={handleLogout}
                 className="text-sm font-medium hover:text-white/80 transition-colors"
               >
                 Log Out
               </button>
-
               <span className="text-white/70 text-sm ml-2">{user.email}</span>
             </>
           ) : (
@@ -111,16 +114,20 @@ export default function Navigation() {
             >
               Home
             </Link>
-
+            <Link
+              href="/bookings"
+              className="w-full text-sm font-medium hover:text-white/90 transition-colors py-2 border-b border-white/10 text-center"
+            >
+              Bookings
+            </Link>
             {user ? (
               <>
                 <Link
-                  href="/my-proposals"
+                  href="/account-settings"
                   className="w-full text-sm font-medium hover:text-white/90 transition-colors py-2 border-b border-white/10 text-center"
                 >
-                  My Proposals
+                  Account
                 </Link>
-
                 <button
                   onClick={handleLogout}
                   className="w-full text-sm font-medium hover:text-white/90 transition-colors py-2 border-b border-white/10 text-center"

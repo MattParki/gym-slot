@@ -2,8 +2,8 @@ import { db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 const SENT_EMAILS_COLLECTION = 'sentEmails';
-const PROPOSALS_COLLECTION = 'proposals';
-const CLIENTS_COLLECTION = 'clients';
+const BOOKINGS_COLLECTION = 'bookings';
+const MEMBERS_COLLECTION = 'members';
 
 export async function sendBusinessInvite({
   to,
@@ -14,14 +14,14 @@ export async function sendBusinessInvite({
   businessId: string;
   inviterId: string;
 }) {
-  const subject = "You've been invited to join a business on ProspectsEasy";
-  const inviteLink = `https://demo.prospectseasy.com/signup?businessId=${businessId}&email=${encodeURIComponent(to)}`;
+  const subject = "You've been invited to join a gym on Gym Slot";
+  const inviteLink = `https://www.gym-slot.com/signup?businessId=${businessId}&email=${encodeURIComponent(to)}`;
 
   const html = `
     <div>
       <h2>You're Invited</h2>
-      <p>You have been invited to join a business on <strong>ProspectsEasy</strong>.</p>
-      <p>Click the link below to sign up and automatically join the business:</p>
+      <p>You have been invited to join a gym on <strong>Gym Slot</strong>.</p>
+      <p>Click the link below to sign up and automatically join the gym:</p>
       <a href="${inviteLink}" target="_blank" style="padding: 10px 20px; background-color: #2563EB; color: white; text-decoration: none; border-radius: 4px;">Join Now</a>
     </div>
   `;
@@ -29,10 +29,10 @@ export async function sendBusinessInvite({
   const res = await fetch("/api/send-email", {
     method: "POST",
     body: JSON.stringify({
-      from: "no-reply@prospectseasy.com",
+      from: "no-reply@gym-slot.com",
       to,
       subject,
-      text: `You've been invited to join a business on ProspectsEasy. Sign up here: ${inviteLink}`,
+      text: `You've been invited to join a gym on Gym Slot. Sign up here: ${inviteLink}`,
       html,
       userId: inviterId,
       meta: {
@@ -51,7 +51,7 @@ export async function sendBusinessInvite({
   }
 }
 
-
+// Optionally, update this function if you want to use gym-related collections
 export async function markEmailAsResponded(emailId: string, customDate?: Date): Promise<void> {
   const emailRef = doc(db, SENT_EMAILS_COLLECTION, emailId);
   const emailSnap = await getDoc(emailRef);
@@ -61,7 +61,7 @@ export async function markEmailAsResponded(emailId: string, customDate?: Date): 
   }
 
   const emailData = emailSnap.data();
-  const proposalId = emailData.proposalId;
+  const bookingId = emailData.bookingId;
 
   const respondedAt = customDate ? customDate.getTime() : Date.now();
 
@@ -71,25 +71,25 @@ export async function markEmailAsResponded(emailId: string, customDate?: Date): 
     respondedAt
   });
 
-  if (!proposalId) return;
+  if (!bookingId) return;
 
-  // 2. Update proposal's clientStatus to 'prospect'
-  const proposalRef = doc(db, PROPOSALS_COLLECTION, proposalId);
-  const proposalSnap = await getDoc(proposalRef);
+  // 2. Update booking's memberStatus to 'active'
+  const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
+  const bookingSnap = await getDoc(bookingRef);
 
-  if (proposalSnap.exists()) {
-    await updateDoc(proposalRef, {
-      clientStatus: "prospect"
+  if (bookingSnap.exists()) {
+    await updateDoc(bookingRef, {
+      memberStatus: "active"
     });
 
-    const proposalData = proposalSnap.data();
-    const clientId = proposalData.clientId;
+    const bookingData = bookingSnap.data();
+    const memberId = bookingData.memberId;
 
-    // 3. Update client's status to 'prospect'
-    if (clientId) {
-      const clientRef = doc(db, CLIENTS_COLLECTION, clientId);
-      await updateDoc(clientRef, {
-        status: "prospect"
+    // 3. Update member's status to 'active'
+    if (memberId) {
+      const memberRef = doc(db, MEMBERS_COLLECTION, memberId);
+      await updateDoc(memberRef, {
+        status: "active"
       });
     }
   }

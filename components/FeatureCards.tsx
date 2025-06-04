@@ -1,10 +1,11 @@
-import { FileText } from "lucide-react";
+import { CalendarCheck, Clock, Users } from "lucide-react";
 
 export interface FeatureCard {
   title: string;
   description: string;
   gradientFrom: string;
   gradientTo: string;
+  icon: React.ReactNode;
 }
 
 interface FeatureCardsProps {
@@ -14,22 +15,25 @@ interface FeatureCardsProps {
 export const FeatureCards: React.FC<FeatureCardsProps> = ({ isDarkBackground = false }) => {
   const featureCards: FeatureCard[] = [
     {
-      title: "AI-Powered Generation",
-      description: "Create tailored proposals in seconds, not hours",
-      gradientFrom: "from-indigo-400",
-      gradientTo: "to-purple-500"
+      title: "Easy Slot Booking",
+      description: "Reserve your gym sessions in just a few taps. No more waiting or uncertainty—secure your spot instantly.",
+      gradientFrom: "from-green-400",
+      gradientTo: "to-blue-500",
+      icon: <CalendarCheck className="h-6 w-6 text-white" />
     },
     {
-      title: "Smart Templates",
-      description: "Our AI adapts to your audience with the perfect tone and style",
+      title: "Real-Time Availability",
+      description: "See live slot availability and avoid overcrowding. Plan your workouts with confidence and flexibility.",
       gradientFrom: "from-blue-400",
-      gradientTo: "to-indigo-500"
+      gradientTo: "to-cyan-500",
+      icon: <Clock className="h-6 w-6 text-white" />
     },
     {
-      title: "Instant Delivery",
-      description: "Send polished proposals directly to clients with a single click",
-      gradientFrom: "from-purple-400",
-      gradientTo: "to-pink-500"
+      title: "Member & Staff Friendly",
+      description: "Designed for both gym members and staff. Manage bookings, view schedules, and keep everyone in sync.",
+      gradientFrom: "from-green-500",
+      gradientTo: "to-teal-400",
+      icon: <Users className="h-6 w-6 text-white" />
     }
   ];
 
@@ -42,13 +46,13 @@ export const FeatureCards: React.FC<FeatureCardsProps> = ({ isDarkBackground = f
             className={`p-6 rounded-lg shadow-md transition-all
               ${isDarkBackground 
                 ? 'bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/15' 
-                : 'bg-white border border-indigo-50 hover:border-indigo-200'
+                : 'bg-white border border-green-50 hover:border-green-200'
               }`}
           >
             <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-4 
               bg-gradient-to-br ${card.gradientFrom} ${card.gradientTo}`}
             >
-              <FileText className="h-6 w-6 text-white" />
+              {card.icon}
             </div>
             <h3 className="text-xl font-semibold mb-2">
               {card.title}

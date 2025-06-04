@@ -11,21 +11,21 @@ export default function DailyMessage({ day, className = "" }: DailyMessageProps)
   const message = useMemo(() => {
     switch (day.toLowerCase()) {
       case "monday":
-        return "Ready to win more clients? Use ProspectsEasy to create compelling proposals in seconds.";
+        return "Start the week strong! Check your class bookings and set the tone for a productive week at your gym.";
       case "tuesday":
-        return "Build on yesterday's momentum. Create proposals that stand out from the competition.";
+        return "Keep the energy up! Review your schedule and make sure all your slots are filled.";
       case "wednesday":
-        return "Mid-week motivation! Turn prospects into clients with professional, AI-powered proposals.";
+        return "Mid-week check: Are your peak hours covered? Adjust your bookings for maximum efficiency.";
       case "thursday":
-        return "Keep the momentum going! Your next successful client relationship is just one proposal away.";
+        return "Almost the weekend! Confirm your upcoming classes and send reminders to your members.";
       case "friday":
-        return "Finish the week strong! Send out those winning proposals before the weekend.";
+        return "Finish the week on a high note. Review your bookings and prep for a busy weekend at the gym.";
       case "saturday":
-        return "Weekend productivity pays off. Take a few minutes to prepare proposals for next week's success.";
+        return "Weekend rush! Monitor your class attendance and keep your members motivated.";
       case "sunday":
-        return "Set yourself up for success. Plan your week and prepare your proposals to hit the ground running tomorrow.";
+        return "Plan ahead for next week. Review your bookings and open new slots for your members.";
       default:
-        return "Ready to win more clients? Use ProspectsEasy to create compelling proposals in seconds.";
+        return "Manage your gym bookings easily and keep your classes running smoothly with Gym Slot.";
     }
   }, [day]);
 

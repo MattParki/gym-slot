@@ -17,17 +17,14 @@ export default function AccountSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Reset loading state when user changes
     setIsLoading(true);
     
-    // Check if user is logged in
     if (!user) {
       setIsBusinessOwner(false);
       setIsLoading(false);
       return;
     }
     
-    // Check if user is a business owner
     const checkOwnerStatus = async () => {
       try {
         const isOwner = await checkIfBusinessOwner(user.uid);
@@ -45,13 +42,10 @@ export default function AccountSettingsPage() {
 
   const checkIfBusinessOwner = async (userId: string): Promise<boolean> => {
     try {
-      // Use the getBusiness function from businessService
       const business = await getBusiness(userId);
-      // If a business is found where this user is the owner, return true
       return business !== null;
     } catch (error) {
-      console.error("Error checking business owner status:", error);
-      return false; // Default to false if there's an error
+      return false;
     }
   };
 
