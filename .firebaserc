@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "proposalai-87cae",
+    "staging": "proposalai-87cae"
+  },
+  "targets": {},
+  "etags": {}
+}
