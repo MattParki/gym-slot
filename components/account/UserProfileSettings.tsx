@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { roleOptions } from "@/models/UserProfile";
-import { industryOptions } from "@/data/industryOptions";
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from "react-hot-toast";
 import {
@@ -193,26 +192,6 @@ export default function UserProfileSettings() {
               </SelectTrigger>
               <SelectContent>
                 {roleOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="industry">Industry</Label>
-            <Select
-              value={industry}
-              onValueChange={setIndustry}
-              disabled={!isBusinessOwner}
-            >
-              <SelectTrigger className={!isBusinessOwner ? "bg-muted cursor-not-allowed" : ""}>
-                <SelectValue placeholder="Select your industry" />
-              </SelectTrigger>
-              <SelectContent>
-                {industryOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

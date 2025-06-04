@@ -28,7 +28,7 @@ export async function createAccount(
   try {
     const idToken = await getIdToken(user);
 
-    const response = await fetch("/api/demo-account", {
+    const response = await fetch("/api/create-account", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const idToken = await getIdToken(userCredential.user);
       
       // 3. Call our API to set up the demo business
-      const response = await fetch("/api/demo-account", {
+      const response = await fetch("/api/create-account", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

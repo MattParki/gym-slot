@@ -1,9 +1,8 @@
-// app/api/demo-account/route.js
+// app/api/create-account/route.js
 import { NextResponse } from "next/server";
 import { getFirestore } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
-
 
 if (!getApps().length) {
   initializeApp({
@@ -20,7 +19,6 @@ const auth = getAuth();
 
 export async function POST(req) {
   try {
-
     const authHeader = req.headers.get("authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -28,18 +26,17 @@ export async function POST(req) {
     }
 
     const idToken = authHeader.split("Bearer ")[1];
-
     const body = await req.json();
     const acceptedMarketing = !!body.acceptedMarketing;
-
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
 
-
       const batch = db.batch();
+
+      const businessId = uid;
 
       const businessRef = db.collection("businesses").doc(businessId);
       const businessDoc = await businessRef.get();
@@ -48,7 +45,6 @@ export async function POST(req) {
       const userProfileDoc = await userProfileRef.get();
 
       const now = new Date();
-
 
       if (businessDoc.exists) {
         return NextResponse.json(
@@ -71,9 +67,7 @@ export async function POST(req) {
         });
       }
 
-
       if (userProfileDoc.exists) {
-
         batch.update(userProfileRef, {
           email: email,
           updatedAt: now,
