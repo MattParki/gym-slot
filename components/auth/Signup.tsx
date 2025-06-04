@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { createDemoAccount } from "@/lib/demoAccount";
+import { createAccount } from "@/lib/createAccount";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -53,7 +53,7 @@ export default function DemoSignup() {
 
       // Then create the associated demo business via our API
       try {
-        await createDemoAccount(userCredential.user, { acceptedMarketing, invitedBusinessId });
+        await createAccount(userCredential.user, { acceptedMarketing, invitedBusinessId });
         toast.success(
           "Account created! Please check your email (including spam folder) for a verification link. You must verify your email before you can log in.",
           {
