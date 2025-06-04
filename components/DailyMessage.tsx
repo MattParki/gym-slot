@@ -11,21 +11,21 @@ export default function DailyMessage({ day, className = "" }: DailyMessageProps)
   const message = useMemo(() => {
     switch (day.toLowerCase()) {
       case "monday":
-        return "Start the week strong! Check your class bookings and set the tone for a productive week at your gym.";
+        return "Start the week strong!";
       case "tuesday":
-        return "Keep the energy up! Review your schedule and make sure all your slots are filled.";
+        return "Keep the energy up!";
       case "wednesday":
-        return "Mid-week check: Are your peak hours covered? Adjust your bookings for maximum efficiency.";
+        return "Mid-week check-in.";
       case "thursday":
-        return "Almost the weekend! Confirm your upcoming classes and send reminders to your members.";
+        return "Almost the weekend!";
       case "friday":
-        return "Finish the week on a high note. Review your bookings and prep for a busy weekend at the gym.";
+        return "Finish the week strong.";
       case "saturday":
-        return "Weekend rush! Monitor your class attendance and keep your members motivated.";
+        return "Weekend rush!";
       case "sunday":
-        return "Plan ahead for next week. Review your bookings and open new slots for your members.";
+        return "Plan ahead for next week.";
       default:
-        return "Manage your gym bookings easily and keep your classes running smoothly with Gym Slot.";
+        return "Manage your gym bookings with Gym Slot.";
     }
   }, [day]);
 

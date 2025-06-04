@@ -79,7 +79,7 @@ export default function Home() {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold">
-                    Welcome back, {greeting}! <span className="text-green-500">Happy {dayOfWeek}!</span>
+                    Welcome back, {greeting}! <br /> <span className="text-green-500">Happy {dayOfWeek}!</span>
                   </h1>
                   <DailyMessage day={dayOfWeek} />
                 </div>
