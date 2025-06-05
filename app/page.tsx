@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { getUserProfile } from "@/services/userService"
 import FeatureCards from "@/components/FeatureCards"
 import DailyMessage from "@/components/DailyMessage"
+import { GymBookingSystem } from "@/components/calendar/gym-booking-system"
 
 export default function Home() {
   const { user } = useAuth();
@@ -105,6 +106,9 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
+            </div>
+            <div className="container py-6">
+              <GymBookingSystem />
             </div>
           </>
         )}
