@@ -38,41 +38,7 @@ export default function UserProfileSettings() {
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo | null>(null);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
-
-  const handleConfirmCancel = async () => {
-    if (!subscriptionInfo) return;
-    setCancelLoading(true);
-
-    try {
-      const res = await fetch("/api/cancel-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscriptionId: subscriptionInfo.subscriptionId }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success(`Subscription cancelled: ${data.status}`);
-        setShowCancelModal(false);
-
-        if (user) {
-          const updatedBusiness = await getBusiness(user.uid);
-          if (updatedBusiness?.subscriptionInfo) {
-            setSubscriptionInfo(updatedBusiness.subscriptionInfo);
-          }
-        }
-      } else {
-        toast.error(data.error || "Failed to cancel subscription.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong while cancelling.");
-    } finally {
-      setCancelLoading(false);
-    }
-  };
+  const [cancelLoading,] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -299,13 +265,7 @@ export default function UserProfileSettings() {
             <Button variant="ghost" onClick={() => setShowCancelModal(false)}>
               Keep Subscription
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmCancel}
-              disabled={cancelLoading}
-            >
-              {cancelLoading ? "Cancelling..." : "Confirm Cancellation"}
-            </Button>
+            
           </DialogFooter>
         </DialogContent>
       </Dialog>
