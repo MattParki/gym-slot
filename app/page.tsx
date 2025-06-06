@@ -85,14 +85,6 @@ export default function Home() {
                   <DailyMessage day={dayOfWeek} />
                 </div>
 
-                <div className="mt-4 md:mt-0">
-                  <Link href="/book-slot">
-                    <Button className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg shadow-md font-medium transition-all hover:shadow-lg w-full md:w-auto">
-                      <PlusCircle className="h-5 w-5 mr-2" />
-                      Book a Gym Slot
-                    </Button>
-                  </Link>
-                </div>
                 {/* My Bookings Link - mobile only */}
                 <div className="md:hidden">
                   <Link href="/my-bookings">
