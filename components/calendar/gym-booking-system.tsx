@@ -75,12 +75,13 @@ export function GymBookingSystem() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedClass, setSelectedClass] = useState<{ gymClass: GymClass; scheduled: ScheduledClass } | null>(null)
 
-  const handleAddClass = (newClass: Omit<GymClass, "id">) => {
+  const handleAddClass = (newClass: Omit<GymClass, "id">): GymClass => {
     const classWithId = {
       ...newClass,
       id: Math.random().toString(36).substring(2, 9),
     }
-    setClasses([...classes, classWithId])
+    setClasses((prev) => [...prev, classWithId])
+    return classWithId
   }
 
   useEffect(() => {
@@ -106,7 +107,6 @@ export function GymBookingSystem() {
         })
 
         setScheduledClasses(loaded)
-  
       } catch (err) {
         console.error("Failed to load scheduled classes:", err)
       }
@@ -189,7 +189,6 @@ export function GymBookingSystem() {
 
         <TabsContent value="classes" className="space-y-4">
           <ClassLibrary
-            classes={classes}
             onAddClass={handleAddClass}
             onUpdateClass={handleUpdateClass}
             onDeleteClass={handleDeleteClass}

@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GymClass } from "./gym-booking-system"
+import { db } from "@/lib/firebase"
+import { collection, doc, updateDoc, addDoc } from "firebase/firestore"
+import toast from "react-hot-toast"
 
 const categories = ["Yoga", "Cardio", "Strength", "Pilates", "Dance", "Martial Arts", "Swimming", "Other"]
 const colors = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316", "#ec4899"]
@@ -17,11 +20,11 @@ const colors = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16"
 interface ClassFormModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (classData: Omit<GymClass, "id">) => void
   initialClass?: GymClass | null
+  onSave: (classData: GymClass) => Promise<void>
 }
 
-export function ClassFormModal({ isOpen, onClose, onSave, initialClass }: ClassFormModalProps) {
+export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassFormModalProps) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -32,6 +35,9 @@ export function ClassFormModal({ isOpen, onClose, onSave, initialClass }: ClassF
     color: colors[0],
     requirements: "",
   })
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
 
   useEffect(() => {
     if (initialClass) {
@@ -59,13 +65,43 @@ export function ClassFormModal({ isOpen, onClose, onSave, initialClass }: ClassF
     }
   }, [initialClass, isOpen])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
-  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const classData = formData;
+    const classesRef = collection(db, "classes");
+
+    try {
+      if (initialClass?.id) {
+        const classDocRef = doc(classesRef, initialClass.id);
+        await updateDoc(classDocRef, classData);
+        toast.success("Class updated!");
+        await onSave({ ...classData, id: initialClass.id });
+      } else {
+        const newDoc = await addDoc(classesRef, classData);
+        toast.success("Class added!");
+        await onSave({ ...classData, id: newDoc.id });
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Error saving class:", error);
+      toast.error("Failed to save class.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) onClose();
+    }}>
+
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{initialClass ? "Edit Class" : "Add New Class"}</DialogTitle>
@@ -142,9 +178,8 @@ export function ClassFormModal({ isOpen, onClose, onSave, initialClass }: ClassF
                 <button
                   key={color}
                   type="button"
-                  className={`w-8 h-8 rounded-full border-2 ${
-                    formData.color === color ? "border-gray-800" : "border-gray-300"
-                  }`}
+                  className={`w-8 h-8 rounded-full border-2 ${formData.color === color ? "border-gray-800" : "border-gray-300"
+                    }`}
                   style={{ backgroundColor: color }}
                   onClick={() => setFormData({ ...formData, color })}
                 />
@@ -178,7 +213,10 @@ export function ClassFormModal({ isOpen, onClose, onSave, initialClass }: ClassF
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">{initialClass ? "Update Class" : "Add Class"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {initialClass ? "Update Class" : "Add Class"}
+            </Button>
+
           </DialogFooter>
         </form>
       </DialogContent>

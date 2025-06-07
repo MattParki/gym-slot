@@ -7,17 +7,20 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, Users, Clock } from "lucide-react"
 import { ClassFormModal } from "./class-form-modal"
 import type { GymClass } from "./gym-booking-system"
+import { useEffect } from "react"
+import { collection, getDocs, addDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface ClassLibraryProps {
-  classes: GymClass[]
   onAddClass: (newClass: Omit<GymClass, "id">) => void
   onUpdateClass: (updatedClass: GymClass) => void
   onDeleteClass: (classId: string) => void
 }
 
-export function ClassLibrary({ classes, onAddClass, onUpdateClass, onDeleteClass }: ClassLibraryProps) {
+export function ClassLibrary({ onAddClass, onUpdateClass, onDeleteClass }: ClassLibraryProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingClass, setEditingClass] = useState<GymClass | null>(null)
+  const [classes, setClasses] = useState<GymClass[]>([])
 
   const handleEdit = (gymClass: GymClass) => {
     setEditingClass(gymClass)
@@ -29,15 +32,35 @@ export function ClassLibrary({ classes, onAddClass, onUpdateClass, onDeleteClass
     setIsModalOpen(true)
   }
 
-  const handleSave = (classData: Omit<GymClass, "id">) => {
-    if (editingClass) {
-      onUpdateClass({ ...classData, id: editingClass.id })
-    } else {
-      onAddClass(classData)
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "classes"))
+        const classList: GymClass[] = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...(doc.data() as Omit<GymClass, "id">),
+        }))
+        setClasses(classList)
+      } catch (err) {
+        console.error("Error loading classes:", err)
+      }
     }
-    setIsModalOpen(false)
-    setEditingClass(null)
+
+    fetchClasses()
+  }, [])
+
+  const handleSave = async (savedClass: GymClass) => {
+  if (editingClass) {
+    onUpdateClass(savedClass)
+    setClasses((prev) => prev.map(cls => (cls.id === savedClass.id ? savedClass : cls)))
+  } else {
+    onAddClass(savedClass)
+    setClasses((prev) => [...prev, savedClass])
   }
+
+  setIsModalOpen(false)
+  setEditingClass(null)
+}
 
   return (
     <div className="space-y-6">
@@ -65,7 +88,10 @@ export function ClassLibrary({ classes, onAddClass, onUpdateClass, onDeleteClass
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(gymClass)}>
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteClass(gymClass.id)}>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    onDeleteClass(gymClass.id)
+                    setClasses(prev => prev.filter(cls => cls.id !== gymClass.id))
+                  }}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
