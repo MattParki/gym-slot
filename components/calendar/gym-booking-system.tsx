@@ -6,6 +6,9 @@ import { CalendarView } from "./calendar-view"
 import { DayDetailModal } from "./day-detail-modal"
 import { ClassDetailModal } from "./class-detail-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { db } from "@/lib/firebase"
+import { collection, getDocs } from "firebase/firestore"
+import { useEffect } from "react"
 
 // Define the class template type
 export type GymClass = {
@@ -24,7 +27,7 @@ export type GymClass = {
 export type ScheduledClass = {
   id: string
   classId: string
-  date: Date
+  date: string | Date
   startTime: string
   endTime: string
   bookedSpots: number
@@ -79,6 +82,39 @@ export function GymBookingSystem() {
     }
     setClasses([...classes, classWithId])
   }
+
+  useEffect(() => {
+    const fetchScheduledClasses = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "scheduledClasses"))
+        const loaded: ScheduledClass[] = snapshot.docs.map((doc) => {
+          const data = doc.data()
+
+          const dateObj =
+            data.date instanceof Date
+              ? data.date
+              : data.date?.toDate?.() ?? new Date(data.date)
+
+          return {
+            id: doc.id,
+            classId: data.classId,
+            date: dateObj,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            bookedSpots: data.bookedSpots ?? 0,
+          }
+        })
+
+        setScheduledClasses(loaded)
+  
+      } catch (err) {
+        console.error("Failed to load scheduled classes:", err)
+      }
+    }
+
+    fetchScheduledClasses()
+  }, [])
+
 
   const handleUpdateClass = (updatedClass: GymClass) => {
     setClasses(classes.map((cls) => (cls.id === updatedClass.id ? updatedClass : cls)))

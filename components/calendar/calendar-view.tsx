@@ -43,7 +43,7 @@ export function CalendarView({
   const calendarEvents = scheduledClasses
     .map((scheduled) => {
       const gymClass = classes.find((cls) => cls.id === scheduled.classId)
-      if (!gymClass) return null
+      if (!gymClass || !scheduled.startTime || !scheduled.endTime) return null
 
       const eventDate = new Date(scheduled.date)
       const [startHours, startMinutes] = scheduled.startTime.split(":").map(Number)

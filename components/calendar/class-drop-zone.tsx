@@ -12,6 +12,8 @@ import { CalendarIcon, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import type { GymClass } from "./gym-booking-system"
+import { collection, addDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface ClassDropZoneProps {
   classes: GymClass[]
@@ -22,13 +24,27 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
   const [selectedClass, setSelectedClass] = useState<GymClass | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [startTime, setStartTime] = useState("09:00")
+  const [endTime, setEndTime] = useState("10:00")
 
-  const handleSchedule = () => {
+  const handleSchedule = async (classId: string, date: Date, startTime: string, endTime: string) => {
     if (selectedClass && selectedDate) {
       onScheduleClass(selectedClass.id, selectedDate, startTime)
       setSelectedClass(null)
       setSelectedDate(undefined)
       setStartTime("09:00")
+      setEndTime("10:00")
+    }
+
+    try {
+      await addDoc(collection(db, "scheduledClasses"), {
+        classId: classId,
+        date: format(date, "yyyy-MM-dd"),
+        startTime,
+        endTime,
+        scheduledAt: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error("Error scheduling class:", error)
     }
   }
 
@@ -99,8 +115,21 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
                 <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
               </div>
 
+               <div className="space-y-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </div>
+
               <div className="flex items-end">
-                <Button onClick={handleSchedule} disabled={!selectedDate} className="w-full">
+                <Button
+                  onClick={() => {
+                    if (selectedClass && selectedDate) {
+                      handleSchedule(selectedClass.id, selectedDate, startTime, endTime)
+                    }
+                  }}
+                  disabled={!selectedDate}
+                  className="w-full"
+                >
                   Schedule Class
                 </Button>
               </div>
