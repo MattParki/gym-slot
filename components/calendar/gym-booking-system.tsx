@@ -70,7 +70,7 @@ const initialClasses: GymClass[] = [
 ]
 
 export function GymBookingSystem() {
-  const [classes, setClasses] = useState<GymClass[]>(initialClasses)
+  const [classes, setClasses] = useState<GymClass[]>([])
   const [scheduledClasses, setScheduledClasses] = useState<ScheduledClass[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedClass, setSelectedClass] = useState<{ gymClass: GymClass; scheduled: ScheduledClass } | null>(null)
@@ -85,12 +85,25 @@ export function GymBookingSystem() {
   }
 
   useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const snapshot = await getDocs(collection(db, "classes"))
+        const loaded: GymClass[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as GymClass[]
+
+        setClasses(loaded)
+      } catch (err) {
+        console.error("Failed to load gym classes:", err)
+      }
+    }
+
     const fetchScheduledClasses = async () => {
       try {
         const snapshot = await getDocs(collection(db, "scheduledClasses"))
         const loaded: ScheduledClass[] = snapshot.docs.map((doc) => {
           const data = doc.data()
-
           const dateObj =
             data.date instanceof Date
               ? data.date
@@ -112,6 +125,7 @@ export function GymBookingSystem() {
       }
     }
 
+    fetchClasses()
     fetchScheduledClasses()
   }, [])
 
