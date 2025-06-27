@@ -26,6 +26,8 @@ export async function sendBusinessInvite({
     </div>
   `;
 
+  console.debug('[sendBusinessInvite] Sending invite', { to, businessId, inviterId, inviteLink });
+
   const res = await fetch("/api/send-email", {
     method: "POST",
     body: JSON.stringify({
@@ -47,16 +49,22 @@ export async function sendBusinessInvite({
 
   if (!res.ok) {
     const data = await res.json();
+    console.error('[sendBusinessInvite] Failed to send email', data);
     throw new Error(data.error || "Failed to send invitation email");
   }
+
+  console.debug('[sendBusinessInvite] Email sent successfully', { to });
 }
 
 // Optionally, update this function if you want to use gym-related collections
 export async function markEmailAsResponded(emailId: string, customDate?: Date): Promise<void> {
+  console.debug('[markEmailAsResponded] Called with', { emailId, customDate });
+
   const emailRef = doc(db, SENT_EMAILS_COLLECTION, emailId);
   const emailSnap = await getDoc(emailRef);
 
   if (!emailSnap.exists()) {
+    console.error('[markEmailAsResponded] Email not found', { emailId });
     throw new Error("Email not found");
   }
 
@@ -70,8 +78,12 @@ export async function markEmailAsResponded(emailId: string, customDate?: Date): 
     responded: true,
     respondedAt
   });
+  console.debug('[markEmailAsResponded] Marked email as responded', { emailId, respondedAt });
 
-  if (!bookingId) return;
+  if (!bookingId) {
+    console.debug('[markEmailAsResponded] No bookingId found, exiting', { emailId });
+    return;
+  }
 
   // 2. Update booking's memberStatus to 'active'
   const bookingRef = doc(db, BOOKINGS_COLLECTION, bookingId);
@@ -81,6 +93,7 @@ export async function markEmailAsResponded(emailId: string, customDate?: Date): 
     await updateDoc(bookingRef, {
       memberStatus: "active"
     });
+    console.debug('[markEmailAsResponded] Updated booking memberStatus to active', { bookingId });
 
     const bookingData = bookingSnap.data();
     const memberId = bookingData.memberId;
@@ -91,6 +104,11 @@ export async function markEmailAsResponded(emailId: string, customDate?: Date): 
       await updateDoc(memberRef, {
         status: "active"
       });
+      console.debug('[markEmailAsResponded] Updated member status to active', { memberId });
+    } else {
+      console.debug('[markEmailAsResponded] No memberId found in booking', { bookingId });
     }
+  } else {
+    console.debug('[markEmailAsResponded] Booking not found', { bookingId });
   }
 }

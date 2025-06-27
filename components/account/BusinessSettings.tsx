@@ -164,7 +164,7 @@ export default function BusinessSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label>Business Members</Label>
+            <Label>Gym Members</Label>
 
             <div className="space-y-4">
               {members.map((member) => (

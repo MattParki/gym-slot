@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GymClass } from "./gym-booking-system"
 import { db } from "@/lib/firebase"
-import { collection, doc, updateDoc, addDoc } from "firebase/firestore"
+import { collection, doc, updateDoc, addDoc, getDoc } from "firebase/firestore"
 import toast from "react-hot-toast"
+import { getAuth } from "firebase/auth";
 
 const categories = ["Yoga", "Cardio", "Strength", "Pilates", "Dance", "Martial Arts", "Swimming", "Other"]
 const colors = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316", "#ec4899"]
@@ -65,17 +66,47 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
     }
   }, [initialClass, isOpen])
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    const classData = formData;
-    const classesRef = collection(db, "classes");
-
     try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      console.log("Current User:", currentUser);
+
+      if (!currentUser) {
+        toast.error("User not authenticated.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Get businessId from user document
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        toast.error("User document not found.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { businessId } = userSnap.data();
+      if (!businessId) {
+        toast.error("No businessId associated with this user.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const classData = {
+        ...formData,
+        businessId,
+      };
+
+      const classesRef = collection(db, "classes");
+
       if (initialClass?.id) {
         const classDocRef = doc(classesRef, initialClass.id);
         await updateDoc(classDocRef, classData);

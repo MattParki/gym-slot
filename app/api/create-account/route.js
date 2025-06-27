@@ -17,9 +17,15 @@ if (!getApps().length) {
 const db = getFirestore();
 const auth = getAuth();
 
+
 export async function POST(req) {
   try {
+
+    console.log("Received request to create account");
+
     const authHeader = req.headers.get("authorization");
+
+    console.log("Authorization Header:", authHeader);
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -27,7 +33,6 @@ export async function POST(req) {
 
     const idToken = authHeader.split("Bearer ")[1];
     const body = await req.json();
-    const acceptedMarketing = !!body.acceptedMarketing;
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
@@ -58,12 +63,6 @@ export async function POST(req) {
           createdAt: now,
           updatedAt: now,
           owners: [uid],
-          members: [],
-          subscriptionInfo: {
-            createdAt: now,
-            lastUpdated: now,
-            status: 'unsubscribed',
-          }
         });
       }
 
@@ -73,7 +72,6 @@ export async function POST(req) {
           updatedAt: now,
           businessId: businessId,
           role: 'owner',
-          acceptedMarketing: acceptedMarketing,
         });
       } else {
         batch.set(userProfileRef, {
@@ -84,7 +82,6 @@ export async function POST(req) {
           role: 'owner',
           displayName: email.split('@')[0],
           onboardingCompleted: false,
-          acceptedMarketing: acceptedMarketing,
         });
       }
 

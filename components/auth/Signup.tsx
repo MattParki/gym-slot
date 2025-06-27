@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,24 +18,6 @@ export default function DemoSignup() {
   const { signup } = useAuth();
   const router = useRouter();
   const [acceptedMarketing, setAcceptedMarketing] = useState(true);
-  const [invitedBusinessId, setInvitedBusinessId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const businessIdFromInvite = urlParams.get("businessId");
-    const invitedEmail = urlParams.get("email");
-
-    console.log("Business ID from invite:", businessIdFromInvite);
-
-    if (businessIdFromInvite) {
-      setInvitedBusinessId(businessIdFromInvite);
-    } else {
-      setInvitedBusinessId(undefined);
-    }
-    if (invitedEmail) {
-      setEmail(invitedEmail);
-    }
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -53,7 +35,8 @@ export default function DemoSignup() {
 
       // Then create the associated demo business via our API
       try {
-        await createAccount(userCredential.user, { acceptedMarketing, invitedBusinessId });
+        console.log("Creating demo business for user:", userCredential.user);
+        await createAccount(userCredential.user );
         toast.success(
           "Account created! Please check your email (including spam folder) for a verification link. You must verify your email before you can log in.",
           {

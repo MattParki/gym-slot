@@ -13,17 +13,10 @@ import { db } from "./firebase";
  */
 export async function createAccount(
   user: User,
-  options?: {
-    acceptedMarketing?: boolean;
-    invitedBusinessId?: string;
-  }
 ): Promise<any> {
   if (!user || !user.uid || !user.email) {
     throw new Error("Invalid user data");
   }
-
-  const acceptedMarketing = options?.acceptedMarketing ?? false;
-  const invitedBusinessId = options?.invitedBusinessId ?? null;
 
   try {
     const idToken = await getIdToken(user);
@@ -34,7 +27,7 @@ export async function createAccount(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ idToken, acceptedMarketing, invitedBusinessId })
+      body: JSON.stringify({ idToken })
     });
 
     if (!response.ok) {
@@ -49,15 +42,13 @@ export async function createAccount(
       }
 
       // fallback for demo accounts, but invited users shouldn't fallback
-      if (invitedBusinessId) throw new Error("Failed to join invited business");
 
-      return await createDemoBusinessDirectly(user, invitedBusinessId ?? 'none');
+      return await createDemoBusinessDirectly(user ?? 'none');
     }
 
     return await response.json();
   } catch (error) {
-    if (invitedBusinessId) throw error; // don't fallback for invited users
-    return await createDemoBusinessDirectly(user, invitedBusinessId ?? 'none');
+    return await createDemoBusinessDirectly(user ?? 'none');
   }
 }
 
@@ -69,7 +60,7 @@ export async function createAccount(
  * @param {User} user - The Firebase user object from authentication
  * @returns {Promise<boolean>} - Returns true if creation was successful
  */
-export async function createDemoBusinessDirectly(user: User, invitedBusinessId?: string): Promise<boolean> {
+export async function createDemoBusinessDirectly(user: User): Promise<boolean> {
   if (!user || !user.uid || !user.email) {
     throw new Error("Invalid user data");
   }
@@ -79,26 +70,7 @@ export async function createDemoBusinessDirectly(user: User, invitedBusinessId?:
   const displayName = email.split('@')[0];
 
   try {
-    if (invitedBusinessId) {
-      // Only create user document
-      await setDoc(doc(db, "users", uid), {
-        email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        businessId: invitedBusinessId,
-        role: "member",
-        displayName,
-      });
-
-      // Optionally add them to the business members array
-      const businessRef = doc(db, "businesses", invitedBusinessId);
-      await updateDoc(businessRef, {
-        members: arrayUnion(uid),
-      });
-
-      return true;
-    } else {
-
+   
       // Create the business document
       await setDoc(doc(db, "businesses", uid), {
         email: email,
@@ -125,7 +97,6 @@ export async function createDemoBusinessDirectly(user: User, invitedBusinessId?:
 
       return true;
 
-    }
   } catch (error) {
     throw new Error(`Direct Firestore creation failed: ${(error as Error).message}`);
   }
