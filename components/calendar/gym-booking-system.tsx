@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 import { useEffect } from "react"
+import { addDoc } from "firebase/firestore"
 
 // Define the class template type
 export type GymClass = {
@@ -75,14 +76,12 @@ export function GymBookingSystem() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedClass, setSelectedClass] = useState<{ gymClass: GymClass; scheduled: ScheduledClass } | null>(null)
 
-  const handleAddClass = (newClass: Omit<GymClass, "id">): GymClass => {
-    const classWithId = {
-      ...newClass,
-      id: Math.random().toString(36).substring(2, 9),
-    }
-    setClasses((prev) => [...prev, classWithId])
-    return classWithId
-  }
+  const handleAddClass = async (newClass: Omit<GymClass, "id">): Promise<GymClass> => {
+    const docRef = await addDoc(collection(db, "classes"), newClass);
+    const classWithId = { ...newClass, id: docRef.id };
+    setClasses((prev) => [...prev, classWithId]);
+    return classWithId;
+  };
 
   useEffect(() => {
     const fetchClasses = async () => {
