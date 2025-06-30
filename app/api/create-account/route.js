@@ -33,6 +33,7 @@ export async function POST(req) {
 
     const idToken = authHeader.split("Bearer ")[1];
     const body = await req.json();
+    const { businessId } = body;
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
@@ -40,49 +41,92 @@ export async function POST(req) {
       const email = decodedToken.email;
 
       const batch = db.batch();
-
-      const businessId = uid;
-
-      const businessRef = db.collection("businesses").doc(businessId);
-      const businessDoc = await businessRef.get();
-
       const userProfileRef = db.collection("users").doc(uid);
       const userProfileDoc = await userProfileRef.get();
-
       const now = new Date();
 
-      if (businessDoc.exists) {
-        return NextResponse.json(
-          { error: "Business already exists for this user" },
-          { status: 400 }
-        );
+      if (businessId) {
+        // User is joining an existing business as a member
+        const businessRef = db.collection("businesses").doc(businessId);
+        const businessDoc = await businessRef.get();
+
+        if (!businessDoc.exists) {
+          return NextResponse.json(
+            { error: "Business not found" },
+            { status: 404 }
+          );
+        }
+
+        // Add user as a member to the business
+        batch.update(businessRef, {
+          members: db.FieldValue.arrayUnion({
+            id: uid,
+            email: email,
+            role: "member"
+          }),
+          updatedAt: now
+        });
+
+        // Create user profile as a member
+        if (userProfileDoc.exists) {
+          batch.update(userProfileRef, {
+            email: email,
+            updatedAt: now,
+            businessId: businessId,
+            role: 'member',
+          });
+        } else {
+          batch.set(userProfileRef, {
+            email: email,
+            createdAt: now,
+            updatedAt: now,
+            businessId: businessId,
+            role: 'member',
+            displayName: email.split('@')[0],
+            onboardingCompleted: false,
+          });
+        }
       } else {
+        // Create new business (demo account)
+        const newBusinessId = uid;
+        const businessRef = db.collection("businesses").doc(newBusinessId);
+        const businessDoc = await businessRef.get();
+
+        if (businessDoc.exists) {
+          return NextResponse.json(
+            { error: "Business already exists for this user" },
+            { status: 400 }
+          );
+        }
+
         // Create new business
         batch.set(businessRef, {
           email: email,
           createdAt: now,
           updatedAt: now,
           owners: [uid],
+          members: [],
         });
-      }
 
-      if (userProfileDoc.exists) {
-        batch.update(userProfileRef, {
-          email: email,
-          updatedAt: now,
-          businessId: businessId,
-          role: 'owner',
-        });
-      } else {
-        batch.set(userProfileRef, {
-          email: email,
-          createdAt: now,
-          updatedAt: now,
-          businessId: businessId,
-          role: 'owner',
-          displayName: email.split('@')[0],
-          onboardingCompleted: false,
-        });
+        // Create user profile as owner
+        if (userProfileDoc.exists) {
+          batch.update(userProfileRef, {
+            email: email,
+            updatedAt: now,
+            businessId: newBusinessId,
+            role: 'owner',
+          });
+        } else {
+          batch.set(userProfileRef, {
+            email: email,
+            createdAt: now,
+            updatedAt: now,
+            businessId: newBusinessId,
+            role: 'owner',
+            displayName: email.split('@')[0],
+            onboardingCompleted: false,
+          });
+        }
       }
 
       await batch.commit();

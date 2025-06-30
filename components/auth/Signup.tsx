@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { createAccount } from "@/lib/createAccount";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function DemoSignup() {
@@ -17,7 +17,22 @@ export default function DemoSignup() {
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [acceptedMarketing, setAcceptedMarketing] = useState(true);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const businessIdParam = searchParams.get('businessId');
+    const emailParam = searchParams.get('email');
+    
+    if (businessIdParam) {
+      setBusinessId(businessIdParam);
+    }
+    
+    if (emailParam) {
+      setEmail(decodeURIComponent(emailParam));
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -33,29 +48,39 @@ export default function DemoSignup() {
       // First, create the Firebase auth account
       const userCredential = await signup(email, password);
 
-      // Then create the associated demo business via our API
+      // Then create the associated account and add to business
       try {
-        console.log("Creating demo business for user:", userCredential.user);
-        await createAccount(userCredential.user );
-        toast.success(
-          "Account created! Please check your email (including spam folder) for a verification link. You must verify your email before you can log in.",
-          {
-            duration: 8000,
-            icon: '✉️',
-          }
-        );
+        await createAccount(userCredential.user, businessId);
+        
+        if (businessId) {
+          toast.success(
+            "Account created! You've been added to the gym. Please check your email (including spam folder) for a verification link, then download the mobile app to start booking classes.",
+            {
+              duration: 8000,
+              icon: '🎉',
+            }
+          );
+        } else {
+          toast.success(
+            "Account created! Please check your email (including spam folder) for a verification link, then download the mobile app.",
+            {
+              duration: 8000,
+              icon: '✉️',
+            }
+          );
+        }
 
-        // Redirect to login page after short delay
+        // Redirect to download app page after short delay
         setTimeout(() => {
-          router.push("/login");
+          router.push("/download-app");
         }, 2000);
-      } catch (demoError) {
-        console.error("Error creating demo business:", demoError);
-        toast.error(`Account created but demo setup failed: ${(demoError as Error).message}`);
+      } catch (accountError) {
+        console.error("Error creating account:", accountError);
+        toast.error(`Account created but setup failed: ${(accountError as Error).message}`);
 
-        // Even if demo account creation fails, redirect to login
+        // Even if account setup fails, redirect to download app
         setTimeout(() => {
-          router.push("/login");
+          router.push("/download-app");
         }, 3000);
       }
     } catch (err) {
@@ -69,9 +94,14 @@ export default function DemoSignup() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Create Demo Account</CardTitle>
+        <CardTitle className="text-2xl text-center">
+          {businessId ? "Join Gym" : "Create Account"}
+        </CardTitle>
         <CardDescription className="text-center">
-          Sign up for a free demo account to explore our platform
+          {businessId 
+            ? "Create your account to join this gym and start booking classes"
+            : "Sign up for an account to explore our platform"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -123,7 +153,10 @@ export default function DemoSignup() {
           </div>
 
           <Button type="submit" disabled={loading} className="w-full bg-[#141E33]">
-            {loading ? "Creating Demo Account..." : "Create Demo Account"}
+            {loading 
+              ? (businessId ? "Joining Gym..." : "Creating Account...") 
+              : (businessId ? "Join Gym" : "Create Account")
+            }
           </Button>
         </form>
 
