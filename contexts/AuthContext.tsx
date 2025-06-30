@@ -60,34 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userCredential;
   }
   
-  // Helper function to check if email belongs to any business
+  // Helper function to check if email belongs to any business (business owners only)
   async function checkEmailBelongsToBusiness(email: string): Promise<boolean> {
     try {
       const businessesRef = collection(db, 'businesses');
       
-      // Check if email matches business email or any member email
+      // Only check if email matches business email (business owner), NOT members
       const businessEmailQuery = query(businessesRef, where('email', '==', email));
       const businessEmailSnapshot = await getDocs(businessEmailQuery);
       
-      if (!businessEmailSnapshot.empty) {
-        return true;
-      }
-      
-      // Check if email is in members array
-      const allBusinessesQuery = query(businessesRef);
-      const allBusinessesSnapshot = await getDocs(allBusinessesQuery);
-      
-      for (const doc of allBusinessesSnapshot.docs) {
-        const business = doc.data();
-        if (business.members && Array.isArray(business.members)) {
-          const memberEmails = business.members.map((member: any) => member.email);
-          if (memberEmails.includes(email)) {
-            return true;
-          }
-        }
-      }
-      
-      return false;
+      return !businessEmailSnapshot.empty;
     } catch (error) {
       console.error('Error checking business email:', error);
       return false;
