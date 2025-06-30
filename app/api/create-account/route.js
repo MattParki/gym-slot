@@ -62,7 +62,9 @@ export async function POST(req) {
           members: db.FieldValue.arrayUnion({
             id: uid,
             email: email,
-            role: "member"
+            role: "member",
+            joinedAt: now.toISOString(),
+            status: "active"
           }),
           updatedAt: now
         });
