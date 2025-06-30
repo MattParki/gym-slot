@@ -4,8 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Clock, Users, AlertCircle, Trash2 } from "lucide-react"
+import { Clock, Users, AlertCircle, Trash2, Loader2 } from "lucide-react"
 import { format } from "date-fns"
+import { doc, deleteDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useState } from "react"
+import toast from "react-hot-toast"
 import type { GymClass, ScheduledClass } from "./gym-booking-system"
 
 interface ClassDetailModalProps {
@@ -17,8 +21,30 @@ interface ClassDetailModalProps {
 }
 
 export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, onDeleteClass }: ClassDetailModalProps) {
+  const [isDeleting, setIsDeleting] = useState(false)
   const availableSpots = gymClass.capacity - scheduledClass.bookedSpots
   const isFullyBooked = availableSpots <= 0
+
+  const handleDeleteClass = async () => {
+    try {
+      setIsDeleting(true)
+      
+      // Delete from Firestore
+      await deleteDoc(doc(db, "scheduledClasses", scheduledClass.id))
+      
+      // Call the parent callback to update UI
+      onDeleteClass(scheduledClass.id)
+      
+      toast.success("Class removed successfully")
+      onClose()
+      
+    } catch (error) {
+      console.error("Error removing class:", error)
+      toast.error("Failed to remove class")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -120,14 +146,24 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
         <DialogFooter className="flex justify-between">
           <Button
             variant="destructive"
-            onClick={() => {
-              onDeleteClass(scheduledClass.id)
-              onClose()
-            }}
+            onClick={handleDeleteClass}
+            disabled={isDeleting}
           >
-            <Trash2 className="mr-2 h-4 w-4" /> Remove Class
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Removing...
+              </>
+            ) : (
+              <>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Class
+              </>
+            )}
           </Button>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose} disabled={isDeleting}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
