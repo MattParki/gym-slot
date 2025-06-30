@@ -10,7 +10,8 @@ import {
   sendPasswordResetEmail,
   getIdToken
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, or } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { UserCredential } from "firebase/auth";
 import { sendEmailVerification } from "firebase/auth"; 
@@ -59,6 +60,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userCredential;
   }
   
+  // Helper function to check if email belongs to any business
+  async function checkEmailBelongsToBusiness(email: string): Promise<boolean> {
+    try {
+      const businessesRef = collection(db, 'businesses');
+      
+      // Check if email matches business email or any member email
+      const businessEmailQuery = query(businessesRef, where('email', '==', email));
+      const businessEmailSnapshot = await getDocs(businessEmailQuery);
+      
+      if (!businessEmailSnapshot.empty) {
+        return true;
+      }
+      
+      // Check if email is in members array
+      const allBusinessesQuery = query(businessesRef);
+      const allBusinessesSnapshot = await getDocs(allBusinessesQuery);
+      
+      for (const doc of allBusinessesSnapshot.docs) {
+        const business = doc.data();
+        if (business.members && Array.isArray(business.members)) {
+          const memberEmails = business.members.map((member: any) => member.email);
+          if (memberEmails.includes(email)) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking business email:', error);
+      return false;
+    }
+  }
+
   async function login(email: string, password: string) {
   
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -70,6 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user.emailVerified) {
       await signOut(auth); // Prevent session from persisting
       throw new Error("Please verify your email address. Check your inbox and spam folder.");
+    }
+
+    // Check if email belongs to any business
+    const emailBelongsToBusiness = await checkEmailBelongsToBusiness(email);
+    if (!emailBelongsToBusiness) {
+      await signOut(auth); // Prevent session from persisting
+      throw new Error("This email is not associated with any business. Please contact your business administrator.");
     }
   }
   
