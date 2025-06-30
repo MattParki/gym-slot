@@ -86,15 +86,15 @@ export default function BookingsPage() {
 
   const getStatusBadge = (status: string) => {
     const statusColors: { [key: string]: string } = {
-      active: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      cancelled: "bg-red-100 text-red-800",
-      completed: "bg-blue-100 text-blue-800",
+      active: "bg-green-100 text-green-800 border-green-200",
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      cancelled: "bg-red-100 text-red-800 border-red-200",
+      completed: "bg-blue-100 text-blue-800 border-blue-200",
     }
 
     return (
-      <Badge className={statusColors[status] || "bg-gray-100 text-gray-800"}>
-        {status}
+      <Badge variant="outline" className={statusColors[status] || "bg-gray-100 text-gray-800 border-gray-200"}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     )
   }
@@ -102,7 +102,7 @@ export default function BookingsPage() {
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString)
-      return format(date, "PPP")
+      return format(date, "MMM d, yyyy")
     } catch {
       return dateString
     }
@@ -119,7 +119,64 @@ export default function BookingsPage() {
     }
   }
 
-  if (loading) {
+  const BookingCard = ({ booking }: { booking: Booking }) => (
+    <Card className="w-full hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex flex-col space-y-3">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">{booking.userEmail}</span>
+            </div>
+            {getStatusBadge(booking.status)}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">{formatDate(booking.classDate)}</span>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">
+              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+            </span>
+          </div>
+          
+          <div className="text-xs text-muted-foreground pt-2 border-t">
+            Booked on {formatDate(booking.bookingDate)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const LoadingCard = () => (
+    <Card className="w-full">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex justify-between items-start">
+            <div className="flex items-center space-x-2">
+              <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
+              <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
+            </div>
+            <div className="h-6 w-16 bg-muted animate-pulse rounded-full"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
+            <div className="h-4 w-24 bg-muted animate-pulse rounded"></div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
+            <div className="h-4 w-28 bg-muted animate-pulse rounded"></div>
+          </div>
+          <div className="h-3 w-20 bg-muted animate-pulse rounded pt-2"></div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  if (loading && bookings.length === 0) {
     return (
       <ProtectedRoute>
         <LayoutWrapper>
@@ -135,21 +192,22 @@ export default function BookingsPage() {
     <ProtectedRoute>
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
-          <div className="bg-[#141E33] text-white rounded-lg">
-            <div className="container mx-auto p-8 md:py-8">
-                              <div className="flex justify-between items-center">
-                  <div>
-                    <h1 className="text-4xl md:text-4xl font-bold mb-4">
-                      Bookings
-                    </h1>
-                    <p className="text-white/80">
-                      View and manage all class bookings
-                    </p>
-                  </div>
-                  <div className="text-sm text-white/70">
-                    {totalBookings} total bookings
-                  </div>
+          <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg">
+            <div className="container mx-auto p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                    Bookings
+                  </h1>
+                  <p className="text-white/80">
+                    View and manage all class bookings
+                  </p>
                 </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
+                  <div className="text-sm text-white/70">Total Bookings</div>
+                  <div className="text-2xl font-bold">{totalBookings}</div>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -161,7 +219,7 @@ export default function BookingsPage() {
               
               <TabsContent value="all-bookings">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="pb-4">
                     <CardTitle>Class Bookings</CardTitle>
                     <CardDescription>
                       All booking records for your gym classes
@@ -178,78 +236,96 @@ export default function BookingsPage() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Booking ID</TableHead>
-                              <TableHead>User</TableHead>
-                              <TableHead>Class Date</TableHead>
-                              <TableHead>Time</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Booked On</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {loading ? (
-                              // Loading skeleton rows
-                              Array.from({ length: pageSize }).map((_, index) => (
-                                <TableRow key={`skeleton-${index}`}>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              bookings.map((booking) => (
-                                <TableRow key={booking.id} className="hover:bg-muted/50">
-                                  <TableCell className="font-medium">
-                                    {booking.id.slice(0, 8)}...
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">{booking.userEmail}</span>
-                                      <span className="text-sm text-muted-foreground">
-                                        {booking.userId.slice(0, 8)}...
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    {formatDate(booking.classDate)}
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex flex-col">
-                                      <span>{formatTime(booking.classStartTime)}</span>
-                                      <span className="text-sm text-muted-foreground">
-                                        to {formatTime(booking.classEndTime)}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    {getStatusBadge(booking.status)}
-                                  </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground">
-                                    {formatDate(booking.bookingDate)}
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
+                        {/* Mobile View - Cards */}
+                        <div className="md:hidden space-y-4">
+                          {loading ? (
+                            Array.from({ length: pageSize }).map((_, index) => (
+                              <LoadingCard key={`loading-card-${index}`} />
+                            ))
+                          ) : (
+                            bookings.map((booking) => (
+                              <BookingCard key={booking.id} booking={booking} />
+                            ))
+                          )}
+                        </div>
+
+                        {/* Desktop View - Table */}
+                        <div className="hidden md:block">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="w-[250px]">User</TableHead>
+                                <TableHead>Class Date</TableHead>
+                                <TableHead>Time</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Booked On</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {loading ? (
+                                // Loading skeleton rows
+                                Array.from({ length: pageSize }).map((_, index) => (
+                                  <TableRow key={`skeleton-${index}`}>
+                                    <TableCell>
+                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              ) : (
+                                bookings.map((booking) => (
+                                  <TableRow key={booking.id} className="hover:bg-muted/50">
+                                    <TableCell>
+                                      <div className="flex items-center space-x-2">
+                                        <User className="h-4 w-4 text-muted-foreground" />
+                                        <div>
+                                          <div className="font-medium">{booking.userEmail}</div>
+                                          <div className="text-xs text-muted-foreground">
+                                            ID: {booking.userId.slice(0, 8)}...
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center space-x-2">
+                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                        <span>{formatDate(booking.classDate)}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center space-x-2">
+                                        <Clock className="h-4 w-4 text-muted-foreground" />
+                                        <div>
+                                          <div>{formatTime(booking.classStartTime)}</div>
+                                          <div className="text-xs text-muted-foreground">
+                                            to {formatTime(booking.classEndTime)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      {getStatusBadge(booking.status)}
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                      {formatDate(booking.bookingDate)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
                         
                         {totalPages > 1 && (
                           <div className="flex justify-center py-4">
