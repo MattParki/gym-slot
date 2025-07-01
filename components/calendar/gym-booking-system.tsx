@@ -80,7 +80,14 @@ export function GymBookingSystem() {
   const handleAddClass = async (newClass: Omit<GymClass, "id">): Promise<GymClass> => {
     const docRef = await addDoc(collection(db, "classes"), newClass);
     const classWithId = { ...newClass, id: docRef.id };
-    setClasses((prev) => [...prev, classWithId]);
+    setClasses((prev) => {
+      // Check if class already exists to prevent duplicates
+      const existingClass = prev.find(cls => cls.id === classWithId.id);
+      if (existingClass) {
+        return prev; // Don't add duplicate
+      }
+      return [...prev, classWithId];
+    });
     return classWithId;
   };
 
@@ -93,7 +100,16 @@ export function GymBookingSystem() {
           ...doc.data(),
         })) as GymClass[]
 
-        setClasses(loaded)
+        // Deduplicate classes by ID to prevent duplicate key errors
+        const uniqueClasses = loaded.reduce((acc: GymClass[], current) => {
+          const existingClass = acc.find(cls => cls.id === current.id)
+          if (!existingClass) {
+            acc.push(current)
+          }
+          return acc
+        }, [])
+
+        setClasses(uniqueClasses)
       } catch (err) {
         console.error("Failed to load gym classes:", err)
       }
@@ -131,7 +147,21 @@ export function GymBookingSystem() {
 
 
   const handleUpdateClass = (updatedClass: GymClass) => {
-    setClasses(classes.map((cls) => (cls.id === updatedClass.id ? updatedClass : cls)))
+    setClasses((prev) => {
+      // Ensure we only update the specific class and don't create duplicates
+      const updatedClasses = prev.map((cls) => (cls.id === updatedClass.id ? updatedClass : cls))
+      
+      // Double-check for duplicates after update
+      const uniqueClasses = updatedClasses.reduce((acc: GymClass[], current) => {
+        const existingClass = acc.find(cls => cls.id === current.id)
+        if (!existingClass) {
+          acc.push(current)
+        }
+        return acc
+      }, [])
+      
+      return uniqueClasses
+    })
   }
 
   const handleDeleteClass = async (classId: string) => {

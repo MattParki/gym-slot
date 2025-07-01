@@ -16,6 +16,7 @@ import {
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
 import { sendBusinessInvite } from "@/services/emailService";
+import CategoryManagement from "./CategoryManagement";
 
 interface BusinessMember {
   id: string;
@@ -136,9 +137,10 @@ export default function BusinessSettings() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-4">
+        <TabsList className="grid grid-cols-3 mb-4">
           <TabsTrigger value="members">Team Members</TabsTrigger>
           <TabsTrigger value="company">Company Info</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
         </TabsList>
 
         <TabsContent value="members" className="space-y-6">
@@ -230,6 +232,10 @@ export default function BusinessSettings() {
             />
           </div>
 
+        </TabsContent>
+
+        <TabsContent value="categories" className="space-y-6">
+          <CategoryManagement />
         </TabsContent>
       </Tabs>
 

@@ -119,8 +119,8 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(category => (
-                <SelectItem key={category} value={category}>
+              {categories.filter(category => category && category.trim() !== "").map((category, index) => (
+                <SelectItem key={`filter-category-${index}-${category}`} value={category}>
                   {category}
                 </SelectItem>
               ))}
@@ -161,7 +161,7 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
                     </div>
                   </div>
                 </CardContent>
-              </Card>
+              </Card> 
             ))}
           </div>
         ) : (

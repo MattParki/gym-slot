@@ -11,18 +11,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { GymClass } from "./gym-booking-system"
 import { db } from "@/lib/firebase"
-import { collection, doc, updateDoc, addDoc, getDoc } from "firebase/firestore"
+import { collection, doc, updateDoc, addDoc, getDoc, getDocs, query, where } from "firebase/firestore"
 import toast from "react-hot-toast"
 import { getAuth } from "firebase/auth";
 
-const categories = ["Yoga", "Cardio", "Strength", "Pilates", "Dance", "Martial Arts", "Swimming", "Other"]
+const defaultCategories = ["Yoga", "Cardio", "Strength", "Pilates", "Dance", "Martial Arts", "Swimming", "Other"]
 const colors = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316", "#ec4899"]
 
 interface ClassFormModalProps {
   isOpen: boolean
   onClose: () => void
   initialClass?: GymClass | null
-  onSave: (classData: GymClass) => Promise<void>
+  onSave: (classData: GymClass | Omit<GymClass, "id">) => Promise<void>
 }
 
 export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassFormModalProps) {
@@ -38,7 +38,87 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [existingClasses, setExistingClasses] = useState<GymClass[]>([]);
 
+  // Fetch categories and existing classes when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+      fetchExistingClasses();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) return;
+
+      // Get user's business ID
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) return;
+
+      const { businessId } = userSnap.data();
+      if (!businessId) return;
+
+      setBusinessId(businessId);
+
+      // Fetch custom categories for this business
+      const categoriesQuery = query(
+        collection(db, "categories"),
+        where("businessId", "==", businessId)
+      );
+      const snapshot = await getDocs(categoriesQuery);
+      const customCategories = snapshot.docs.map(doc => doc.data().name);
+
+      // Combine default and custom categories, removing duplicates
+      const allCategories = [...defaultCategories, ...customCategories];
+      const uniqueCategories = Array.from(new Set(allCategories));
+      setCategories(uniqueCategories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      // Fall back to default categories
+      setCategories(defaultCategories);
+    }
+  };
+
+  const fetchExistingClasses = async () => {
+    try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) return;
+
+      // Get user's business ID
+      const userDocRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) return;
+
+      const { businessId } = userSnap.data();
+      if (!businessId) return;
+
+      // Fetch existing classes for this business
+      const classesQuery = query(
+        collection(db, "classes"),
+        where("businessId", "==", businessId)
+      );
+      const snapshot = await getDocs(classesQuery);
+      const classes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as GymClass[];
+
+      setExistingClasses(classes);
+    } catch (error) {
+      console.error("Error fetching existing classes:", error);
+    }
+  };
 
   useEffect(() => {
     if (initialClass) {
@@ -66,12 +146,30 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
     }
   }, [initialClass, isOpen])
 
+  // Check if current name is duplicate
+  const isDuplicateName = existingClasses.some(
+    cls => cls.name.toLowerCase().trim() === formData.name.toLowerCase().trim() && 
+           cls.id !== initialClass?.id
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
+      // Check for duplicate class names
+      const duplicateClass = existingClasses.find(
+        cls => cls.name.toLowerCase().trim() === formData.name.toLowerCase().trim() && 
+               cls.id !== initialClass?.id // Allow editing the same class
+      );
+
+      if (duplicateClass) {
+        toast.error(`A class named "${formData.name}" already exists. Please choose a different name.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const auth = getAuth();
       const currentUser = auth.currentUser;
 
@@ -105,17 +203,16 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
         businessId,
       };
 
-      const classesRef = collection(db, "classes");
-
       if (initialClass?.id) {
-        const classDocRef = doc(classesRef, initialClass.id);
+        // For editing existing classes, update Firestore directly
+        const classDocRef = doc(db, "classes", initialClass.id);
         await updateDoc(classDocRef, classData);
         toast.success("Class updated!");
         await onSave({ ...classData, id: initialClass.id });
       } else {
-        const newDoc = await addDoc(classesRef, classData);
+        // For new classes, let the parent handle Firestore operations
         toast.success("Class added!");
-        await onSave({ ...classData, id: newDoc.id });
+        await onSave(classData as Omit<GymClass, "id">);
       }
 
       onClose();
@@ -146,7 +243,13 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              className={isDuplicateName ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
+            {isDuplicateName && formData.name.trim() && (
+              <p className="text-sm text-red-500">
+                A class named "{formData.name}" already exists. Please choose a different name.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -166,8 +269,8 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
+                {categories.filter(category => category && category.trim() !== "").map((category, index) => (
+                  <SelectItem key={`category-${index}-${category}`} value={category}>
                     {category}
                   </SelectItem>
                 ))}
@@ -244,7 +347,7 @@ export function ClassFormModal({ isOpen, onClose, initialClass, onSave }: ClassF
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || isDuplicateName}>
               {initialClass ? "Update Class" : "Add Class"}
             </Button>
 

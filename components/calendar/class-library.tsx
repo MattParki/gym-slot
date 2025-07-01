@@ -13,7 +13,7 @@ import { collection, getDocs, addDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface ClassLibraryProps {
-  onAddClass: (newClass: Omit<GymClass, "id">) => void
+  onAddClass: (newClass: Omit<GymClass, "id">) => Promise<GymClass>
   onUpdateClass: (updatedClass: GymClass) => void
   onDeleteClass: (classId: string) => Promise<void>
 }
@@ -50,13 +50,13 @@ export function ClassLibrary({ onAddClass, onUpdateClass, onDeleteClass }: Class
     fetchClasses()
   }, [])
 
-  const handleSave = async (savedClass: GymClass) => {
+  const handleSave = async (savedClass: GymClass | Omit<GymClass, "id">) => {
   if (editingClass) {
-    onUpdateClass(savedClass)
-    setClasses((prev) => prev.map(cls => (cls.id === savedClass.id ? savedClass : cls)))
+    onUpdateClass(savedClass as GymClass)
+    setClasses((prev) => prev.map(cls => (cls.id === (savedClass as GymClass).id ? savedClass as GymClass : cls)))
   } else {
-    onAddClass(savedClass)
-    setClasses((prev) => [...prev, savedClass])
+    const newClassWithId = await onAddClass(savedClass as Omit<GymClass, "id">)
+    setClasses((prev) => [...prev, newClassWithId])
   }
 
   setIsModalOpen(false)
