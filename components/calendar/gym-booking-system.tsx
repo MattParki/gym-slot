@@ -7,9 +7,10 @@ import { DayDetailModal } from "./day-detail-modal"
 import { ClassDetailModal } from "./class-detail-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { db } from "@/lib/firebase"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"
 import { useEffect } from "react"
 import { addDoc } from "firebase/firestore"
+import toast from "react-hot-toast"
 
 // Define the class template type
 export type GymClass = {
@@ -133,10 +134,21 @@ export function GymBookingSystem() {
     setClasses(classes.map((cls) => (cls.id === updatedClass.id ? updatedClass : cls)))
   }
 
-  const handleDeleteClass = (classId: string) => {
-    setClasses(classes.filter((cls) => cls.id !== classId))
-    // Also remove any scheduled instances of this class
-    setScheduledClasses(scheduledClasses.filter((scheduled) => scheduled.classId !== classId))
+  const handleDeleteClass = async (classId: string) => {
+    try {
+      // Delete from Firestore
+      await deleteDoc(doc(db, "classes", classId))
+      
+      // Update local state
+      setClasses(classes.filter((cls) => cls.id !== classId))
+      // Also remove any scheduled instances of this class
+      setScheduledClasses(scheduledClasses.filter((scheduled) => scheduled.classId !== classId))
+      
+      toast.success("Class deleted successfully")
+    } catch (error) {
+      console.error("Error deleting class:", error)
+      toast.error("Failed to delete class")
+    }
   }
 
   const handleScheduleClass = (classId: string, date: Date, startTime: string) => {
