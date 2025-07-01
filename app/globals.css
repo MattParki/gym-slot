@@ -55,3 +55,70 @@ body {
   background-color: #1a2642;
   color: white;
 }
+
+/* Mobile calendar improvements */
+@media (max-width: 640px) {
+  .rbc-calendar {
+    font-size: 0.8rem;
+  }
+  
+  .rbc-header {
+    font-size: 0.75rem;
+    padding: 8px 4px;
+    font-weight: 600;
+  }
+  
+  .rbc-date-cell {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+  }
+  
+  .rbc-event {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  
+  .rbc-month-view {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  .rbc-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .rbc-toolbar-label {
+    font-size: 1rem;
+    font-weight: 600;
+    min-width: 150px;
+    text-align: center;
+  }
+  
+  .rbc-btn-group {
+    display: flex;
+    gap: 4px;
+  }
+  
+  .rbc-btn-group button {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+  }
+  
+  .rbc-btn-group button:hover {
+    background: #f3f4f6;
+  }
+  
+  .rbc-btn-group button.rbc-active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
+}

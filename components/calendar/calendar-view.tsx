@@ -82,7 +82,7 @@ export function CalendarView({
     <div className="space-y-4">
       <ClassDropZone classes={classes} onScheduleClass={onScheduleClass} />
 
-      <div className="h-[600px] bg-white rounded-lg shadow p-4">
+      <div className="h-[500px] sm:h-[600px] bg-white rounded-lg shadow p-2 sm:p-4">
         <Calendar
           localizer={localizer}
           events={calendarEvents}

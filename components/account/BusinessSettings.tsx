@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Users, UserCheck, Building, FolderOpen } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getBusiness,
@@ -17,6 +17,7 @@ import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
 import { sendBusinessInvite } from "@/services/emailService";
 import CategoryManagement from "./CategoryManagement";
+import GymMemberManagement from "./GymMemberManagement";
 
 interface BusinessMember {
   id: string;
@@ -136,14 +137,46 @@ export default function BusinessSettings() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="members">Team Members</TabsTrigger>
-          <TabsTrigger value="company">Company Info</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Business Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your business information, staff members, and gym customers
+        </p>
+      </div>
+
+      <Tabs defaultValue="gym-members" className="w-full">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="staff" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Staff Members
+          </TabsTrigger>
+          <TabsTrigger value="gym-members" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Gym Customers
+          </TabsTrigger>
+          <TabsTrigger value="company" className="flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            Company Info
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <FolderOpen className="h-4 w-4" />
+            Categories
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="members" className="space-y-6">
+        <TabsContent value="staff" className="space-y-6">
+          <div className="space-y-3">
+            <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-4 rounded">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                Staff Member Management
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage employees and staff who can access your gym's admin system. These are not your gym customers.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Label htmlFor="businessEmail">Business Email</Label>
@@ -166,7 +199,10 @@ export default function BusinessSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label>Gym Members</Label>
+            <Label>Staff Members (Admin Access)</Label>
+            <p className="text-sm text-muted-foreground">
+              These staff members can log in and manage your gym's bookings, classes, and customers.
+            </p>
 
             <div className="space-y-4">
               {members.map((member) => (
@@ -191,7 +227,7 @@ export default function BusinessSettings() {
 
               <div className="flex gap-2">
                 <Input
-                  placeholder="Add member email"
+                  placeholder="Add staff member email"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
                   disabled={loading}
@@ -202,14 +238,41 @@ export default function BusinessSettings() {
                   disabled={!newMemberEmail.trim() || loading}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add
+                  Add Staff
                 </Button>
               </div>
             </div>
           </div>
         </TabsContent>
 
+        <TabsContent value="gym-members" className="space-y-6">
+          <div className="space-y-3">
+            <div className="border-l-4 border-green-500 pl-4 bg-green-50 p-4 rounded">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Gym Customer Management
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Manage your gym customers who have memberships and book classes. These are your paying customers, not staff members.
+              </p>
+            </div>
+          </div>
+          <GymMemberManagement />
+        </TabsContent>
+
         <TabsContent value="company" className="space-y-6">
+          <div className="space-y-3">
+            <div className="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Company Information
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Update your gym's basic information and contact details.
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="companyName">Company Name</Label>
             <Input
@@ -235,6 +298,17 @@ export default function BusinessSettings() {
         </TabsContent>
 
         <TabsContent value="categories" className="space-y-6">
+          <div className="space-y-3">
+            <div className="border-l-4 border-orange-500 pl-4 bg-orange-50 p-4 rounded">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FolderOpen className="h-5 w-5" />
+                Class Categories
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Organize your gym classes into categories for better organization and filtering.
+              </p>
+            </div>
+          </div>
           <CategoryManagement />
         </TabsContent>
       </Tabs>
