@@ -87,6 +87,11 @@ export default function GymMemberManagement() {
   const [loading, setLoading] = useState(false)
   const [businessId, setBusinessId] = useState<string | null>(null)
   
+  // Status update modal state
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [statusUpdateMember, setStatusUpdateMember] = useState<GymMember | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<"Active" | "Inactive" | "Suspended" | "Expired">("Active")
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -314,6 +319,43 @@ export default function GymMemberManagement() {
     return expirationDate <= thirtyDaysFromNow
   }
 
+  const handleStatusUpdate = (member: GymMember) => {
+    setStatusUpdateMember(member)
+    setSelectedStatus(member.membershipStatus)
+    setIsStatusModalOpen(true)
+  }
+
+  const handleConfirmStatusUpdate = async () => {
+    if (!statusUpdateMember || selectedStatus === statusUpdateMember.membershipStatus) {
+      setIsStatusModalOpen(false)
+      return
+    }
+
+    await updateMemberStatus(statusUpdateMember.id, selectedStatus)
+    setIsStatusModalOpen(false)
+    setStatusUpdateMember(null)
+  }
+
+  const getStatusDescription = (status: GymMember["membershipStatus"]) => {
+    switch (status) {
+      case "Active": return "Member has full access to gym facilities and classes"
+      case "Inactive": return "Member account is inactive but not expired"
+      case "Suspended": return "Member access is temporarily suspended"
+      case "Expired": return "Member's subscription has expired"
+      default: return ""
+    }
+  }
+
+  const getStatusIcon = (status: GymMember["membershipStatus"]) => {
+    switch (status) {
+      case "Active": return <UserCheck className="h-4 w-4 text-green-600" />
+      case "Inactive": return <User className="h-4 w-4 text-gray-600" />
+      case "Suspended": return <UserX className="h-4 w-4 text-red-600" />
+      case "Expired": return <AlertTriangle className="h-4 w-4 text-orange-600" />
+      default: return <User className="h-4 w-4" />
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -461,27 +503,16 @@ export default function GymMemberManagement() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Quick Status Actions */}
-                    {member.membershipStatus === "Active" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateMemberStatus(member.id, "Suspended")}
-                        className="text-orange-600 hover:text-orange-700"
-                      >
-                        <UserX className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {member.membershipStatus === "Suspended" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateMemberStatus(member.id, "Active")}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <UserCheck className="h-4 w-4" />
-                      </Button>
-                    )}
+                    {/* Status Update Button */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleStatusUpdate(member)}
+                      className="flex items-center gap-1"
+                    >
+                      {getStatusIcon(member.membershipStatus)}
+                      <span className="hidden sm:inline">Status</span>
+                    </Button>
                     
                     <Button
                       size="sm"
@@ -719,6 +750,73 @@ export default function GymMemberManagement() {
             </Button>
             <Button onClick={handleSaveMember} disabled={loading}>
               {editingMember ? "Update Member" : "Add Member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Update Modal */}
+      <Dialog open={isStatusModalOpen} onOpenChange={setIsStatusModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Member Status</DialogTitle>
+          </DialogHeader>
+          
+          {statusUpdateMember && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <h4 className="font-medium text-lg">
+                  {statusUpdateMember.firstName} {statusUpdateMember.lastName}
+                </h4>
+                <p className="text-sm text-muted-foreground">{statusUpdateMember.email}</p>
+              </div>
+              
+              <div className="space-y-3">
+                <Label>Select New Status</Label>
+                {membershipStatuses.map((status) => (
+                  <div 
+                    key={status}
+                    className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                      selectedStatus === status 
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => setSelectedStatus(status)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        {getStatusIcon(status)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{status}</span>
+                          <Badge className={getStatusColor(status)}>
+                            {status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {getStatusDescription(status)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsStatusModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmStatusUpdate}
+              disabled={!statusUpdateMember || selectedStatus === statusUpdateMember.membershipStatus}
+            >
+              Update Status
             </Button>
           </DialogFooter>
         </DialogContent>
