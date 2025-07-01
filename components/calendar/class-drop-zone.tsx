@@ -1,16 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Clock } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Clock } from "lucide-react"
 import { format } from "date-fns"
-import { cn } from "@/lib/utils"
 import type { GymClass } from "./gym-booking-system"
 import { collection, addDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -24,6 +23,7 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
   const [selectedClass, setSelectedClass] = useState<GymClass | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [startTime, setStartTime] = useState("09:00")
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -33,19 +33,30 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
     return `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`
   }
 
-  const handleSchedule = async (classId: string, date: Date, startTime: string) => {
+  const handleClassClick = (gymClass: GymClass) => {
+    setSelectedClass(gymClass)
+    setIsModalOpen(true)
+    // Reset form when opening modal
+    setSelectedDate(undefined)
+    setStartTime("09:00")
+  }
+
+  const handleSchedule = async () => {
     if (selectedClass && selectedDate) {
       const endTime = calculateEndTime(startTime, selectedClass.duration)
       
       onScheduleClass(selectedClass.id, selectedDate, startTime)
+      
+      // Close modal and reset form
+      setIsModalOpen(false)
       setSelectedClass(null)
       setSelectedDate(undefined)
       setStartTime("09:00")
 
       try {
         await addDoc(collection(db, "scheduledClasses"), {
-          classId: classId,
-          date: format(date, "yyyy-MM-dd"),
+          classId: selectedClass.id,
+          date: format(selectedDate, "yyyy-MM-dd"),
           startTime,
           endTime,
           scheduledAt: new Date().toISOString(),
@@ -56,31 +67,33 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
     }
   }
 
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedClass(null)
+    setSelectedDate(undefined)
+    setStartTime("09:00")
+  }
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">Schedule Classes</h3>
         <p className="text-sm text-muted-foreground">
-          Click on a class below to select it, then choose a date and time to schedule it.
+          Click on a class below to schedule it.
         </p>
       </div>
 
       {/* Class Selection */}
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          {selectedClass ? `Selected: ${selectedClass.name}` : "Select a Class"}
+          Available Classes
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {classes.map((gymClass) => (
             <Card
               key={gymClass.id}
-              className={cn(
-                "cursor-pointer transition-all hover:shadow-md border-2",
-                selectedClass?.id === gymClass.id 
-                  ? "ring-2 ring-primary border-primary bg-primary/5" 
-                  : "border-muted hover:border-primary/50",
-              )}
-              onClick={() => setSelectedClass(gymClass)}
+              className="cursor-pointer transition-all hover:shadow-md border-2 border-muted hover:border-primary/50"
+              onClick={() => handleClassClick(gymClass)}
             >
               <div className="h-2 w-full rounded-t-lg" style={{ backgroundColor: gymClass.color }} />
               <CardContent className="p-3">
@@ -95,77 +108,133 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
                     {gymClass.duration}m
                   </div>
                 </div>
-                {selectedClass?.id === gymClass.id && (
-                  <div className="mt-2 text-xs text-primary font-medium">
-                    ✓ Selected
-                  </div>
-                )}
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Scheduling Controls */}
-      {selectedClass && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Schedule: {selectedClass.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Select Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground",
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
+      {/* Scheduling Modal */}
+      <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="text-center pb-4">
+            <DialogTitle className="text-xl font-semibold">
+              Schedule Class
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedClass && (
+            <div className="space-y-6">
+              {/* Class Info Card */}
+              <div className="relative overflow-hidden rounded-xl border bg-card">
+                <div className="h-2 w-full" style={{ backgroundColor: selectedClass.color }} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">{selectedClass.name}</h3>
+                      <p className="text-muted-foreground">{selectedClass.instructor}</p>
+                    </div>
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedClass.category}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      <span>{selectedClass.duration} min</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>👥</span>
+                      <span>{selectedClass.capacity} people</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-                {selectedClass && (
-                  <p className="text-xs text-muted-foreground">
-                    End time: {calculateEndTime(startTime, selectedClass.duration)} ({selectedClass.duration} minutes)
-                  </p>
-                )}
+              {/* Date & Time Selection */}
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Date Selection */}
+                <div className="flex-1 space-y-3">
+                  <Label className="text-base font-medium">Select Date</Label>
+                  <div className="border rounded-lg p-3 bg-muted/20 flex justify-center">
+                    <Calendar 
+                      mode="single" 
+                      selected={selectedDate} 
+                      onSelect={setSelectedDate} 
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus 
+                      classNames={{
+                        months: "flex w-full flex-col space-y-4",
+                        month: "space-y-4 w-full flex flex-col",
+                        caption: "flex justify-center pt-1 relative items-center",
+                        caption_label: "text-sm font-medium",
+                        nav: "space-x-1 flex items-center",
+                        nav_button: "h-7 w-7 bg-transparent p-0 hover:bg-accent hover:text-accent-foreground",
+                        table: "w-full border-collapse space-y-1 max-w-[280px]",
+                        head_row: "flex w-full",
+                        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
+                        row: "flex w-full mt-1",
+                        cell: "text-center text-sm p-0 relative w-9 h-9 [&:has([aria-selected])]:bg-accent focus-within:relative focus-within:z-20",
+                        day: "h-9 w-9 p-0 font-normal hover:bg-accent hover:text-accent-foreground rounded-md",
+                        day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                        day_today: "bg-accent text-accent-foreground",
+                        day_outside: "text-muted-foreground opacity-50",
+                        day_disabled: "text-muted-foreground opacity-50",
+                        day_hidden: "invisible",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Time Selection */}
+                <div className="flex-shrink-0 w-full lg:w-80 space-y-3">
+                  <Label htmlFor="startTime" className="text-base font-medium">Start Time</Label>
+                  <div className="space-y-4">
+                    <Input 
+                      id="startTime" 
+                      type="time" 
+                      value={startTime} 
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="text-lg py-3 text-center h-12"
+                    />
+                    <div className="p-4 bg-muted/50 rounded-lg text-center">
+                      <p className="text-sm font-medium text-muted-foreground mb-2">
+                        Session Duration
+                      </p>
+                      <p className="text-xl font-semibold mb-1">
+                        {startTime} - {calculateEndTime(startTime, selectedClass.duration)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedClass.duration} minutes
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-end md:col-span-2">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
                 <Button
-                  onClick={() => {
-                    if (selectedClass && selectedDate) {
-                      handleSchedule(selectedClass.id, selectedDate, startTime)
-                    }
-                  }}
+                  variant="outline"
+                  onClick={handleModalClose}
+                  className="flex-1 py-3"
+                  size="lg"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSchedule}
                   disabled={!selectedDate}
-                  className="w-full"
+                  className="flex-1 py-3"
+                  size="lg"
                 >
                   Schedule Class
                 </Button>
               </div>
             </div>
-
-            <div className="text-sm text-muted-foreground">
-              Duration: {selectedClass.duration} minutes • Capacity: {selectedClass.capacity} people
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
