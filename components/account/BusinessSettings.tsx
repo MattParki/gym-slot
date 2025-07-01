@@ -145,22 +145,26 @@ export default function BusinessSettings() {
       </div>
 
       <Tabs defaultValue="gym-members" className="w-full">
-        <TabsList className="grid grid-cols-4 mb-4">
-          <TabsTrigger value="staff" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Staff Members
+        <TabsList className="grid grid-cols-4 mb-4 h-auto">
+          <TabsTrigger value="staff" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+            <UserCheck className="h-4 w-4 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Staff Members</span>
+            <span className="text-xs sm:hidden">Staff</span>
           </TabsTrigger>
-          <TabsTrigger value="gym-members" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Gym Customers
+          <TabsTrigger value="gym-members" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+            <Users className="h-4 w-4 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Gym Customers</span>
+            <span className="text-xs sm:hidden">Customers</span>
           </TabsTrigger>
-          <TabsTrigger value="company" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            Company Info
+          <TabsTrigger value="company" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+            <Building className="h-4 w-4 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Company Info</span>
+            <span className="text-xs sm:hidden">Company</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-2">
-            <FolderOpen className="h-4 w-4" />
-            Categories
+          <TabsTrigger value="categories" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+            <FolderOpen className="h-4 w-4 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm hidden sm:inline">Categories</span>
+            <span className="text-xs sm:hidden">Categories</span>
           </TabsTrigger>
         </TabsList>
 
