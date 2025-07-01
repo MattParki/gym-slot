@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calendar } from "@/components/ui/calendar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Clock } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Clock, Search, Filter } from "lucide-react"
 import { format } from "date-fns"
 import type { GymClass } from "./gym-booking-system"
 import { collection, addDoc } from "firebase/firestore"
@@ -24,6 +25,22 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
   const [selectedDate, setSelectedDate] = useState<Date>()
   const [startTime, setStartTime] = useState("09:00")
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+
+  // Get unique categories from classes
+  const categories = Array.from(new Set(classes.map(c => c.category)))
+
+  // Filter classes based on search and category
+  const filteredClasses = classes.filter(gymClass => {
+    const matchesSearch = searchQuery === "" || 
+      gymClass.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      gymClass.instructor.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesCategory = selectedCategory === "all" || gymClass.category === selectedCategory
+    
+    return matchesSearch && matchesCategory
+  })
 
   const calculateEndTime = (startTime: string, durationMinutes: number): string => {
     const [hours, minutes] = startTime.split(':').map(Number)
@@ -83,35 +100,93 @@ export function ClassDropZone({ classes, onScheduleClass }: ClassDropZoneProps) 
         </p>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search classes or instructors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2 sm:w-48">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Class Selection */}
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Available Classes
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          {classes.map((gymClass) => (
-            <Card
-              key={gymClass.id}
-              className="cursor-pointer transition-all hover:shadow-md border-2 border-muted hover:border-primary/50"
-              onClick={() => handleClassClick(gymClass)}
-            >
-              <div className="h-2 w-full rounded-t-lg" style={{ backgroundColor: gymClass.color }} />
-              <CardContent className="p-3">
-                <h4 className="font-medium text-sm">{gymClass.name}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{gymClass.instructor}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline" className="text-xs">
-                    {gymClass.category}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {gymClass.duration}m
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Available Classes
+          </h4>
+          <span className="text-xs text-muted-foreground">
+            {filteredClasses.length} of {classes.length} classes
+          </span>
         </div>
+        {filteredClasses.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {filteredClasses.map((gymClass) => (
+              <Card
+                key={gymClass.id}
+                className="cursor-pointer transition-all hover:shadow-md border-2 border-muted hover:border-primary/50"
+                onClick={() => handleClassClick(gymClass)}
+              >
+                <div className="h-2 w-full rounded-t-lg" style={{ backgroundColor: gymClass.color }} />
+                <CardContent className="p-3">
+                  <h4 className="font-medium text-sm">{gymClass.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-1">{gymClass.instructor}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {gymClass.category}
+                    </Badge>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {gymClass.duration}m
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-muted-foreground mb-2">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No classes found</h3>
+              <p className="text-sm">
+                Try adjusting your search terms or category filter
+              </p>
+            </div>
+            {(searchQuery || selectedCategory !== "all") && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchQuery("")
+                  setSelectedCategory("all")
+                }}
+                className="mt-4"
+              >
+                Clear filters
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Scheduling Modal */}
