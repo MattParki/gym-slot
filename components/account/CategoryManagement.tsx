@@ -5,9 +5,19 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Plus, Trash2, Edit2, Check, X } from "lucide-react"
-import { collection, doc, getDocs, addDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore"
+import { collection, doc, getDocs, getDoc, addDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import toast from "react-hot-toast"
 
@@ -27,85 +37,83 @@ export default function CategoryManagement() {
   const [loading, setLoading] = useState(false)
   const [businessId, setBusinessId] = useState<string | null>(null)
 
+  // Fetch businessId when user changes
   useEffect(() => {
+    const fetchBusinessId = async () => {
+      if (!user?.uid) return
+
+      try {
+        const userDocRef = doc(db, "users", user.uid)
+        const userSnap = await getDoc(userDocRef)
+
+        if (userSnap.exists()) {
+          const data = userSnap.data() as { businessId?: string }
+          if (data.businessId) {
+            setBusinessId(data.businessId)
+          } else {
+            console.warn("User document has no businessId")
+            setBusinessId(null)
+            toast.error("No business ID found for your account")
+          }
+        } else {
+          console.warn("No user document found")
+          setBusinessId(null)
+          toast.error("User document not found")
+        }
+      } catch (error) {
+        console.error("Error fetching businessId:", error)
+        toast.error("Error fetching your business ID")
+      }
+    }
+
     if (user) {
       fetchBusinessId()
     }
   }, [user])
 
+  // Fetch categories when businessId changes
   useEffect(() => {
-    if (businessId) {
-      fetchCategories()
+    const fetchCategories = async () => {
+      if (!businessId) return
+
+      try {
+        const categoriesQuery = query(
+          collection(db, "categories"),
+          where("businessId", "==", businessId)
+        )
+        const snapshot = await getDocs(categoriesQuery)
+        const list = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Category[]
+        setCategories(list)
+      } catch (error) {
+        console.error("Error fetching categories:", error)
+        toast.error("Failed to load categories")
+      }
     }
+
+    fetchCategories()
   }, [businessId])
 
-  const fetchBusinessId = async () => {
-    if (!user) return
-    
-    try {
-      const userDoc = await getDocs(query(collection(db, "users"), where("email", "==", user.email)))
-      if (!userDoc.empty) {
-        const userData = userDoc.docs[0].data()
-        setBusinessId(userData.businessId || user.uid)
-      } else {
-        setBusinessId(user.uid)
-      }
-    } catch (error) {
-      console.error("Error fetching business ID:", error)
-      setBusinessId(user.uid)
-    }
-  }
-
-  const fetchCategories = async () => {
-    if (!businessId) return
-
-    try {
-      const categoriesQuery = query(
-        collection(db, "categories"),
-        where("businessId", "==", businessId)
-      )
-      const snapshot = await getDocs(categoriesQuery)
-      const categoryList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Category[]
-
-      setCategories(categoryList)
-    } catch (error) {
-      console.error("Error fetching categories:", error)
-      toast.error("Failed to load categories")
-    }
-  }
-
   const handleAddCategory = async () => {
-    const trimmedName = newCategoryName.trim()
-    
-    if (!trimmedName || !businessId) {
+    const trimmed = newCategoryName.trim()
+    if (!trimmed || !businessId) {
       toast.error("Category name cannot be empty")
       return
     }
-
-    if (categories.some(cat => cat.name.toLowerCase() === trimmedName.toLowerCase())) {
+    if (categories.some(cat => cat.name.toLowerCase() === trimmed.toLowerCase())) {
       toast.error("Category already exists")
       return
     }
-
     setLoading(true)
     try {
       const docRef = await addDoc(collection(db, "categories"), {
-        name: trimmedName,
+        name: trimmed,
         businessId,
-        createdAt: new Date()
+        createdAt: new Date(),
       })
-
-      const newCategory = {
-        id: docRef.id,
-        name: trimmedName,
-        businessId,
-        createdAt: new Date()
-      }
-
-      setCategories([...categories, newCategory])
+      setCategories([...categories, { id: docRef.id, name: trimmed, businessId, createdAt: new Date() }])
       setNewCategoryName("")
       toast.success("Category added successfully")
     } catch (error) {
@@ -116,43 +124,30 @@ export default function CategoryManagement() {
     }
   }
 
-  const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
+  const handleDeleteCategory = async (id: string, name: string) => {
     try {
-      await deleteDoc(doc(db, "categories", categoryId))
-      setCategories(categories.filter(cat => cat.id !== categoryId))
-      toast.success(`"${categoryName}" deleted successfully`)
+      await deleteDoc(doc(db, "categories", id))
+      setCategories(categories.filter(cat => cat.id !== id))
+      toast.success(`"${name}" deleted successfully`)
     } catch (error) {
       console.error("Error deleting category:", error)
       toast.error("Failed to delete category")
     }
   }
 
-  const handleEditStart = (category: Category) => {
-    setEditingCategory(category.id)
-    setEditName(category.name)
-  }
-
-  const handleEditSave = async (categoryId: string) => {
-    const trimmedName = editName.trim()
-    
-    if (!trimmedName) {
+  const handleEditSave = async (id: string) => {
+    const trimmed = editName.trim()
+    if (!trimmed) {
       toast.error("Category name cannot be empty")
       return
     }
-
-    if (categories.some(cat => cat.id !== categoryId && cat.name.toLowerCase() === trimmedName.toLowerCase())) {
-      toast.error("Category name already exists")
+    if (categories.some(cat => cat.id !== id && cat.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Category already exists")
       return
     }
-
     try {
-      await updateDoc(doc(db, "categories", categoryId), {
-        name: trimmedName
-      })
-
-      setCategories(categories.map(cat => 
-        cat.id === categoryId ? { ...cat, name: trimmedName } : cat
-      ))
+      await updateDoc(doc(db, "categories", id), { name: trimmed })
+      setCategories(categories.map(cat => (cat.id === id ? { ...cat, name: trimmed } : cat)))
       setEditingCategory(null)
       setEditName("")
       toast.success("Category updated successfully")
@@ -162,20 +157,13 @@ export default function CategoryManagement() {
     }
   }
 
-  const handleEditCancel = () => {
-    setEditingCategory(null)
-    setEditName("")
-  }
-
   const defaultCategories = ["Yoga", "Cardio", "Strength", "Pilates", "Dance", "Martial Arts", "Swimming", "Other"]
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium mb-2">Manage Categories</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Create custom categories for your classes. These will be available when creating or editing classes.
-        </p>
+        <p className="text-sm text-muted-foreground mb-4">Create custom categories for your classes.</p>
       </div>
 
       <Card>
@@ -184,21 +172,15 @@ export default function CategoryManagement() {
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                placeholder="Enter category name"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleAddCategory()}
-                disabled={loading}
-              />
-            </div>
-            <Button
-              onClick={handleAddCategory}
-              disabled={!newCategoryName.trim() || loading}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add
+            <Input
+              placeholder="Enter category name"
+              value={newCategoryName}
+              onChange={e => setNewCategoryName(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleAddCategory()}
+              disabled={loading}
+            />
+            <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || loading}>
+              <Plus className="h-4 w-4 mr-2" /> Add
             </Button>
           </div>
         </CardContent>
@@ -210,50 +192,39 @@ export default function CategoryManagement() {
         </CardHeader>
         <CardContent>
           {categories.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No custom categories yet.</p>
-              <p className="text-sm mt-1">Add your first category above to get started.</p>
-            </div>
+            <p className="text-center py-8 text-muted-foreground">No custom categories yet.</p>
           ) : (
             <div className="space-y-2">
-              {categories.map((category) => (
-                <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  {editingCategory === category.id ? (
-                    <div className="flex items-center gap-2 flex-1">
+              {categories.map(cat => (
+                <div key={cat.id} className="flex justify-between items-center border rounded-lg p-3">
+                  {editingCategory === cat.id ? (
+                    <>
                       <Input
                         value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === "Enter") handleEditSave(category.id)
-                          if (e.key === "Escape") handleEditCancel()
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") handleEditSave(cat.id)
+                          if (e.key === "Escape") {
+                            setEditingCategory(null)
+                            setEditName("")
+                          }
                         }}
-                        className="flex-1"
                         autoFocus
                       />
-                      <Button
-                        size="sm"
-                        onClick={() => handleEditSave(category.id)}
-                        disabled={!editName.trim()}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleEditCancel}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={() => handleEditSave(cat.id)} disabled={!editName.trim()}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setEditingCategory(null); setEditName("") }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
                   ) : (
                     <>
-                      <span className="font-medium">{category.name}</span>
+                      <span>{cat.name}</span>
                       <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditStart(category)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => { setEditingCategory(cat.id); setEditName(cat.name) }}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <AlertDialog>
@@ -265,17 +236,11 @@ export default function CategoryManagement() {
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Category</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{category.name}"? This action cannot be undone.
-                                Existing classes using this category will keep their current category assignment.
-                              </AlertDialogDescription>
+                              <AlertDialogDescription>Are you sure you want to delete "{cat.name}"?</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteCategory(category.id, category.name)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
+                              <AlertDialogAction onClick={() => handleDeleteCategory(cat.id, cat.name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -296,21 +261,13 @@ export default function CategoryManagement() {
           <CardTitle className="text-base">Default Categories</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            These default categories are always available for your classes:
-          </p>
           <div className="flex flex-wrap gap-2">
-            {defaultCategories.map((category) => (
-              <span
-                key={category}
-                className="px-2 py-1 bg-muted rounded-md text-sm"
-              >
-                {category}
-              </span>
+            {defaultCategories.map(name => (
+              <span key={name} className="px-2 py-1 bg-muted rounded-md text-sm">{name}</span>
             ))}
           </div>
         </CardContent>
       </Card>
     </div>
   )
-} 
+}
