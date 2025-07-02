@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import {
   AlertDialog,
@@ -33,12 +34,14 @@ import {
   CreditCard,
   AlertTriangle,
   UserCheck,
-  UserX
+  UserX,
+  Send
 } from "lucide-react"
 import { collection, doc, getDocs, getDoc, addDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import toast from "react-hot-toast"
 import { format } from "date-fns"
+import { getBusiness } from "@/services/businessService"
 
 interface GymMember {
   id: string
@@ -86,11 +89,13 @@ export default function GymMemberManagement() {
   const [editingMember, setEditingMember] = useState<GymMember | null>(null)
   const [loading, setLoading] = useState(false)
   const [businessId, setBusinessId] = useState<string | null>(null)
+  const [businessName, setBusinessName] = useState<string>("")
+  const [sendInviteEmail, setSendInviteEmail] = useState(true)
   
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
   const [statusUpdateMember, setStatusUpdateMember] = useState<GymMember | null>(null)
-  const [selectedStatus, setSelectedStatus] = useState<"Active" | "Inactive" | "Suspended" | "Expired">("Active")
+  const [selectedStatus, setSelectedStatus] = useState<typeof membershipStatuses[number]>("Active")
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -111,9 +116,9 @@ export default function GymMemberManagement() {
     notes: ""
   })
 
-  // Fetch business ID
+  // Fetch business ID and name
   useEffect(() => {
-    const fetchBusinessId = async () => {
+    const fetchBusinessInfo = async () => {
       if (!user?.uid) return
 
       try {
@@ -124,16 +129,22 @@ export default function GymMemberManagement() {
           const data = userSnap.data() as { businessId?: string }
           if (data.businessId) {
             setBusinessId(data.businessId)
+            
+            // Fetch business details to get the name
+            const business = await getBusiness(user.uid)
+            if (business) {
+              setBusinessName(business.companyName || business.name || "Your Gym")
+            }
           }
         }
       } catch (error) {
-        console.error("Error fetching businessId:", error)
-        toast.error("Error fetching your business ID")
+        console.error("Error fetching business info:", error)
+        toast.error("Error fetching your business information")
       }
     }
 
     if (user) {
-      fetchBusinessId()
+      fetchBusinessInfo()
     }
   }, [user])
 
@@ -195,6 +206,7 @@ export default function GymMemberManagement() {
 
   const handleAddMember = () => {
     setEditingMember(null)
+    setSendInviteEmail(true) // Default to sending invitation email
     setFormData({
       firstName: "",
       lastName: "",
@@ -265,11 +277,41 @@ export default function GymMemberManagement() {
         const docRef = await addDoc(collection(db, "gymMembers"), memberData)
         const newMember = { ...memberData, id: docRef.id } as GymMember
         setMembers(prev => [...prev, newMember])
-        toast.success("Member added successfully")
+        
+        // Send invitation email if requested
+        if (sendInviteEmail && formData.email) {
+          try {
+            const response = await fetch('/api/send-invite', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                businessId: businessId,
+                businessName: businessName,
+              }),
+            })
+
+            if (response.ok) {
+              toast.success(`Member added successfully and invitation sent to ${formData.email}`)
+            } else {
+              toast.success("Member added successfully")
+              toast.error("Failed to send invitation email, but member was created")
+            }
+          } catch (emailError) {
+            console.error("Error sending invitation email:", emailError)
+            toast.success("Member added successfully")
+            toast.error("Failed to send invitation email, but member was created")
+          }
+        } else {
+          toast.success("Member added successfully")
+        }
       }
 
       setIsModalOpen(false)
       setEditingMember(null)
+      setSendInviteEmail(true) // Reset to default
     } catch (error) {
       console.error("Error saving member:", error)
       toast.error("Failed to save member")
@@ -742,6 +784,28 @@ export default function GymMemberManagement() {
                 rows={2}
               />
             </div>
+
+            {/* Email Invitation Option - Only show for new members */}
+            {!editingMember && (
+              <div className="space-y-4 pt-4 border-t border-border">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="sendInvite"
+                    checked={sendInviteEmail}
+                    onCheckedChange={(checked) => setSendInviteEmail(checked as boolean)}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <Send className="h-4 w-4 text-primary" />
+                    <Label htmlFor="sendInvite" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Send signup invitation email
+                    </Label>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  When enabled, an email will be sent to {formData.email || "the member"} with a link to sign up for the mobile app and access their membership.
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
