@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
 import { Pagination } from '@/components/ui/pagination';
+import LoadingScreen from '@/components/LoadingScreen';
 
 interface PaginationMetadata {
   hasMore: boolean;
@@ -37,7 +38,7 @@ export function FirebasePagination<T>({
   paginationClassName = '',
   paginationMode = 'infinite',
   emptyState = <div className="py-10 text-center text-gray-500">No items found</div>,
-  loadingState = <div className="py-10 text-center">Loading...</div>,
+  loadingState = <LoadingScreen message="Loading content..." fullScreen={false} />,
   dependencies = []
 }: FirebasePaginationProps<T>) {
   const [items, setItems] = useState<T[]>([]);

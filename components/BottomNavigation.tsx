@@ -10,13 +10,13 @@ export default function BottomNavigation() {
   const pathname = usePathname()
 
   const getActiveTab = (path: string) => {
-    return pathname === path ? "text-white" : "text-white/70"
+    return pathname === path ? "text-blue-600" : "text-gray-600"
   }
 
   // A small line above the active tab on mobile
   const getActiveIndicator = (path: string) => {
     if (pathname === path) {
-      return <div className="absolute top-0 left-0 right-0 h-0.5 bg-white"></div>
+      return <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-teal-600"></div>
     }
     return null
   }
@@ -32,7 +32,7 @@ export default function BottomNavigation() {
   const environment = process.env.NEXT_PUBLIC_ENVIRONMENT
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141E33] border-t border-white/10 z-40">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-200 z-40 backdrop-blur-sm">
       <div className="flex justify-around items-center h-16">
         {user ? (
           <>
@@ -67,8 +67,8 @@ export default function BottomNavigation() {
               onClick={handleLogout}
               className="relative flex flex-col items-center justify-center w-full h-full"
             >
-              <LogOut className="h-6 w-6 text-white/70" />
-              <span className="text-xs mt-1 text-white/70">Logout</span>
+              <LogOut className="h-6 w-6 text-gray-600" />
+              <span className="text-xs mt-1 text-gray-600">Logout</span>
             </button>
           </>
         ) : (

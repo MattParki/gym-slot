@@ -65,9 +65,9 @@ export default function AccountSettingsPage() {
     <ProtectedRoute>
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
-          <div className="bg-[#141E33] text-white rounded-lg">
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 rounded-lg shadow-sm">
             <div className="container mx-auto p-8 md:py-8">
-              <h1 className="text-4xl md:text-4xl font-bold mb-4">
+              <h1 className="text-4xl md:text-4xl font-bold mb-4 text-gray-900">
                 Account Settings
               </h1>
             </div>
@@ -75,10 +75,20 @@ export default function AccountSettingsPage() {
           
           <div className="container mx-auto p-4 md:p-8">
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="profile">My Profile</TabsTrigger>
+              <TabsList className="mb-6 h-auto bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+                <TabsTrigger 
+                  value="profile" 
+                  className="px-6 py-3 font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+                >
+                  My Profile
+                </TabsTrigger>
                 {isBusinessOwner && (
-                  <TabsTrigger value="business">Business Settings</TabsTrigger>
+                  <TabsTrigger 
+                    value="business" 
+                    className="px-6 py-3 font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+                  >
+                    Business Settings
+                  </TabsTrigger>
                 )}
               </TabsList>
               

@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function UserProfileSettings() {
   const { user } = useAuth();
@@ -97,7 +98,7 @@ export default function UserProfileSettings() {
   };
 
   if (initialLoading) {
-    return <div>Loading user data...</div>;
+    return <LoadingScreen message="Loading your profile..." fullScreen={false} />;
   }
 
   return (

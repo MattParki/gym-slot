@@ -192,20 +192,20 @@ export default function BookingsPage() {
     <ProtectedRoute>
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
-          <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg">
+          <div className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 rounded-lg shadow-sm">
             <div className="container mx-auto p-6 md:p-8">
               <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900">
                     Bookings
                   </h1>
-                  <p className="text-white/80">
+                  <p className="text-gray-700">
                     View and manage all class bookings
                   </p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2">
-                  <div className="text-sm text-white/70">Total Bookings</div>
-                  <div className="text-2xl font-bold">{totalBookings}</div>
+                <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
+                  <div className="text-sm text-gray-600">Total Bookings</div>
+                  <div className="text-2xl font-bold text-gray-900">{totalBookings}</div>
                 </div>
               </div>
             </div>
@@ -213,8 +213,8 @@ export default function BookingsPage() {
           
           <div className="container mx-auto p-4 md:p-8">
             <Tabs defaultValue="all-bookings" className="w-full">
-              <TabsList className="mb-6">
-                <TabsTrigger value="all-bookings">All Bookings</TabsTrigger>
+              <TabsList className="mb-6 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+                <TabsTrigger value="all-bookings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">All Bookings</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all-bookings">

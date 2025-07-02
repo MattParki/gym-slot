@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import { sendBusinessInvite } from "@/services/emailService";
 import CategoryManagement from "./CategoryManagement";
 import GymMemberManagement from "./GymMemberManagement";
+import LoadingScreen from "@/components/LoadingScreen";
 
 interface BusinessMember {
   id: string;
@@ -132,7 +133,7 @@ export default function BusinessSettings() {
   };
 
   if (initialLoading) {
-    return <div>Loading business data...</div>;
+    return <LoadingScreen message="Loading business settings..." fullScreen={false} />;
   }
 
   return (
@@ -145,32 +146,44 @@ export default function BusinessSettings() {
       </div>
 
       <Tabs defaultValue="gym-members" className="w-full">
-        <TabsList className="grid grid-cols-4 mb-4 h-auto">
-          <TabsTrigger value="staff" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+                    <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4 h-auto bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+          <TabsTrigger 
+            value="staff" 
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+          >
             <UserCheck className="h-4 w-4 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Staff Members</span>
-            <span className="text-xs sm:hidden">Staff</span>
+            <span className="hidden sm:inline">Staff Members</span>
+            <span className="sm:hidden">Staff</span>
           </TabsTrigger>
-          <TabsTrigger value="gym-members" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+          <TabsTrigger 
+            value="gym-members" 
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+          >
             <Users className="h-4 w-4 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Gym Customers</span>
-            <span className="text-xs sm:hidden">Customers</span>
+            <span className="hidden sm:inline">Gym Customers</span>
+            <span className="sm:hidden">Customers</span>
           </TabsTrigger>
-          <TabsTrigger value="company" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+          <TabsTrigger 
+            value="company" 
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+          >
             <Building className="h-4 w-4 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Company Info</span>
-            <span className="text-xs sm:hidden">Company</span>
+            <span className="hidden sm:inline">Company Info</span>
+            <span className="sm:hidden">Company</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3">
+          <TabsTrigger 
+            value="categories" 
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+          >
             <FolderOpen className="h-4 w-4 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm hidden sm:inline">Categories</span>
-            <span className="text-xs sm:hidden">Categories</span>
+            <span className="hidden sm:inline">Categories</span>
+            <span className="sm:hidden">Categories</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="staff" className="space-y-6">
           <div className="space-y-3">
-            <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-4 rounded">
+            <div className="border-l-4 border-gray-300 pl-4 bg-gray-50 p-4 rounded">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <UserCheck className="h-5 w-5" />
                 Staff Member Management
@@ -251,7 +264,7 @@ export default function BusinessSettings() {
 
         <TabsContent value="gym-members" className="space-y-6">
           <div className="space-y-3">
-            <div className="border-l-4 border-green-500 pl-4 bg-green-50 p-4 rounded">
+            <div className="border-l-4 border-gray-300 pl-4 bg-gray-50 p-4 rounded">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 Gym Customer Management
@@ -266,7 +279,7 @@ export default function BusinessSettings() {
 
         <TabsContent value="company" className="space-y-6">
           <div className="space-y-3">
-            <div className="border-l-4 border-purple-500 pl-4 bg-purple-50 p-4 rounded">
+            <div className="border-l-4 border-gray-300 pl-4 bg-gray-50 p-4 rounded">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Building className="h-5 w-5" />
                 Company Information
@@ -303,7 +316,7 @@ export default function BusinessSettings() {
 
         <TabsContent value="categories" className="space-y-6">
           <div className="space-y-3">
-            <div className="border-l-4 border-orange-500 pl-4 bg-orange-50 p-4 rounded">
+            <div className="border-l-4 border-gray-300 pl-4 bg-gray-50 p-4 rounded">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <FolderOpen className="h-5 w-5" />
                 Class Categories

@@ -104,7 +104,7 @@ export default function GymMemberManagement() {
     phone: "",
     address: "",
     membershipPlan: "",
-    membershipStatus: "Active" as const,
+    membershipStatus: "Active" as "Active" | "Inactive" | "Suspended" | "Expired",
     joinDate: format(new Date(), "yyyy-MM-dd"),
     expirationDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
     emergencyContact: {
@@ -214,7 +214,7 @@ export default function GymMemberManagement() {
       phone: "",
       address: "",
       membershipPlan: "",
-      membershipStatus: "Active",
+      membershipStatus: "Active" as "Active" | "Inactive" | "Suspended" | "Expired",
       joinDate: format(new Date(), "yyyy-MM-dd"),
       expirationDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
       emergencyContact: {
@@ -237,7 +237,7 @@ export default function GymMemberManagement() {
       phone: member.phone,
       address: member.address,
       membershipPlan: member.membershipPlan,
-      membershipStatus: member.membershipStatus,
+      membershipStatus: member.membershipStatus as "Active" | "Inactive" | "Suspended" | "Expired",
       joinDate: format(member.joinDate, "yyyy-MM-dd"),
       expirationDate: format(member.expirationDate, "yyyy-MM-dd"),
       emergencyContact: member.emergencyContact,

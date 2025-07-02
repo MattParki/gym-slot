@@ -51,9 +51,71 @@ body {
   @apply bg-slate-50;
 }
 
+/* Animation delays for loading screen */
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-150 {
+  animation-delay: 0.15s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
 .dark-blue-bg {
   background-color: #1a2642;
   color: white;
+}
+
+/* Calendar improvements */
+.rbc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rbc-toolbar-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  min-width: 200px;
+  text-align: center;
+  flex: 1;
+}
+
+.rbc-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.rbc-btn-group button {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #374151;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.rbc-btn-group button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.rbc-btn-group button.rbc-active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
 }
 
 /* Mobile calendar improvements */
@@ -89,6 +151,7 @@ body {
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 16px;
+    justify-content: center;
   }
   
   .rbc-toolbar-label {
@@ -96,29 +159,17 @@ body {
     font-weight: 600;
     min-width: 150px;
     text-align: center;
+    order: -1;
+    width: 100%;
   }
   
   .rbc-btn-group {
-    display: flex;
-    gap: 4px;
+    gap: 6px;
   }
   
   .rbc-btn-group button {
     padding: 6px 12px;
     font-size: 0.75rem;
     border-radius: 6px;
-    border: 1px solid #d1d5db;
-    background: white;
-    color: #374151;
-  }
-  
-  .rbc-btn-group button:hover {
-    background: #f3f4f6;
-  }
-  
-  .rbc-btn-group button.rbc-active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
   }
 }
