@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     const internalEmailId = randomUUID(); // Generate a unique ID for the email
 
-    const senderEmail = from || "no-reply@breakfreedigitalagency.com";
+    const senderEmail = from || "noreply@gym-slot.com";
 
     const transporter = nodemailer.createTransport({
       host: process.env.MAILTRAP_HOST,

@@ -61,6 +61,7 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
     const emailPromises = bookedUsers.map(async (booking) => {
       try {
         const emailData = {
+          from: "noreply@gym-slot.com",
           to: booking.userEmail,
           subject: `Class Cancelled: ${className} on ${classDate}`,
           html: `
