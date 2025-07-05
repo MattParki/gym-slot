@@ -33,6 +33,10 @@ export type ScheduledClass = {
   startTime: string
   endTime: string
   bookedSpots: number
+  status?: "active" | "cancelled"
+  cancelledAt?: Date
+  cancellationReason?: string
+  cancelledBy?: string
 }
 
 // Define booking type for real-time updates
@@ -153,11 +157,16 @@ export function GymBookingSystem() {
             startTime: data.startTime,
             endTime: data.endTime,
             bookedSpots: data.bookedSpots ?? 0,
+            status: data.status || "active", // Default to active if no status
+            cancelledAt: data.cancelledAt ? data.cancelledAt.toDate() : undefined,
+            cancellationReason: data.cancellationReason || undefined,
+            cancelledBy: data.cancelledBy || undefined,
           }
         })
 
         setScheduledClasses(loaded)
         console.log("📡 Real-time scheduled classes update:", loaded.length, "scheduled classes loaded")
+        console.log(`🚫 Cancelled classes: ${loaded.filter(sc => sc.status === "cancelled").length}`)
       },
       (error) => {
         console.error("Failed to load scheduled classes:", error)

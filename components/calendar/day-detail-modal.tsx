@@ -38,48 +38,76 @@ export function DayDetailModal({
           {sortedClasses.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No classes scheduled for this day</p>
           ) : (
-            sortedClasses.map(({ gymClass, scheduled }) => (
-              <Card key={scheduled.id}>
-                <div className="h-2 w-full rounded-t-lg" style={{ backgroundColor: gymClass.color }} />
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{gymClass.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{gymClass.instructor}</p>
+            sortedClasses.map(({ gymClass, scheduled }) => {
+              const isCancelled = scheduled.status === "cancelled"
+              
+              return (
+                <Card key={scheduled.id} className={isCancelled ? "opacity-75" : ""}>
+                  <div 
+                    className={`h-2 w-full rounded-t-lg ${isCancelled ? 'bg-red-500' : ''}`}
+                    style={!isCancelled ? { backgroundColor: gymClass.color } : {}} 
+                  />
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className={`text-lg ${isCancelled ? 'text-red-600' : ''}`}>
+                          {isCancelled ? '🚫 ' : ''}{gymClass.name}
+                          {isCancelled && (
+                            <Badge variant="destructive" className="ml-2 text-xs">
+                              CANCELLED
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">{gymClass.instructor}</p>
+                        {isCancelled && scheduled.cancellationReason && (
+                          <p className="text-xs text-red-600 mt-1 italic">
+                            Reason: {scheduled.cancellationReason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => onClassClick(gymClass, scheduled)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {!isCancelled && (
+                          <Button variant="ghost" size="sm" onClick={() => onDeleteClass(scheduled.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => onClassClick(gymClass, scheduled)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => onDeleteClass(scheduled.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  </CardHeader>
+                
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span className={isCancelled ? 'line-through text-muted-foreground' : ''}>
+                          {scheduled.startTime} - {scheduled.endTime}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span className={isCancelled ? 'line-through text-muted-foreground' : ''}>
+                          {scheduled.bookedSpots}/{gymClass.capacity}
+                        </span>
+                      </div>
+                      <Badge variant="secondary">{gymClass.category}</Badge>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {scheduled.startTime} - {scheduled.endTime}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {scheduled.bookedSpots}/{gymClass.capacity}
-                    </div>
-                    <Badge variant="secondary">{gymClass.category}</Badge>
-                  </div>
 
-                  <p className="text-sm text-muted-foreground">{gymClass.description}</p>
-
-                  {gymClass.requirements && (
-                    <p className="text-xs text-muted-foreground border-l-2 border-muted pl-2">
-                      Requirements: {gymClass.requirements}
+                    <p className={`text-sm text-muted-foreground ${isCancelled ? 'line-through' : ''}`}>
+                      {gymClass.description}
                     </p>
-                  )}
-                </CardContent>
-              </Card>
-            ))
+
+                    {gymClass.requirements && (
+                      <p className={`text-xs text-muted-foreground border-l-2 border-muted pl-2 ${isCancelled ? 'line-through' : ''}`}>
+                        Requirements: {gymClass.requirements}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </div>
       </DialogContent>

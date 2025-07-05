@@ -55,15 +55,20 @@ export function CalendarView({
       const end = new Date(eventDate)
       end.setHours(endHours, endMinutes)
 
+      const isCancelled = scheduled.status === "cancelled"
+
       return {
         id: scheduled.id,
-        title: gymClass.name,
+        title: isCancelled ? `🚫 ${gymClass.name} - CANCELLED` : gymClass.name,
         start,
         end,
         resource: { gymClass, scheduled },
         style: {
-          backgroundColor: gymClass.color,
-          borderColor: gymClass.color,
+          backgroundColor: isCancelled ? "#ef4444" : gymClass.color,
+          borderColor: isCancelled ? "#dc2626" : gymClass.color,
+          color: isCancelled ? "#ffffff" : "#ffffff",
+          textDecoration: isCancelled ? "line-through" : "none",
+          opacity: isCancelled ? 0.8 : 1,
         },
       }
     })

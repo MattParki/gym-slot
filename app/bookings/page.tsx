@@ -28,6 +28,8 @@ interface Booking {
   status: string
   userEmail: string
   userId: string
+  cancellationReason?: string
+  cancelledAt?: string
 }
 
 interface GymClass {
@@ -280,44 +282,72 @@ export default function BookingsPage() {
     }
   }
 
-  const BookingCard = ({ booking }: { booking: EnhancedBooking }) => (
-    <Card className="w-full hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex flex-col space-y-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium text-sm">{booking.userEmail}</span>
+  const BookingCard = ({ booking }: { booking: EnhancedBooking }) => {
+    const isCancelled = booking.status === "cancelled"
+    
+    return (
+      <Card className={`w-full hover:shadow-md transition-shadow ${isCancelled ? 'bg-red-50 border-red-200' : ''}`}>
+        <CardContent className="p-4">
+          <div className="flex flex-col space-y-3">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className={`font-medium text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                  {booking.userEmail}
+                </span>
+              </div>
+              <Badge
+                variant={isCancelled ? "destructive" : (booking.status === "active" ? "default" : "secondary")}
+                className="text-xs"
+              >
+                {isCancelled ? "CANCELLED" : booking.status.toUpperCase()}
+              </Badge>
             </div>
-            {getStatusBadge(booking.status)}
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-sm">{booking.className}</span>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className={`font-semibold text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                  {isCancelled ? '🚫 ' : ''}{booking.className}
+                </span>
+              </div>
+              {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
             </div>
-            {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
+            
+            <div className="flex items-center space-x-2">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              <span className={`text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                {formatDate(booking.classDate)}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className={`text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+              </span>
+            </div>
+            
+            <div className={`text-xs text-muted-foreground pt-2 ${isCancelled ? 'line-through' : ''}`}>
+              Instructor: {booking.instructor} • Booked on {formatDate(booking.bookingDate)}
+            </div>
+            
+            {isCancelled && booking.cancellationReason && (
+              <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-xs">
+                <p className="text-red-700">
+                  <strong>Cancellation Reason:</strong> {booking.cancellationReason}
+                </p>
+                {booking.cancelledAt && (
+                  <p className="text-red-600 mt-1">
+                    Cancelled on {formatDate(booking.cancelledAt)}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{formatDate(booking.classDate)}</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
-            </span>
-          </div>
-          
-          <div className="text-xs text-muted-foreground pt-2">
-            Instructor: {booking.instructor} • Booked on {formatDate(booking.bookingDate)}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+        </CardContent>
+      </Card>
+    )
+  }
 
   const LoadingCard = () => (
     <Card className="w-full">
@@ -542,55 +572,73 @@ export default function BookingsPage() {
                                   </TableCell>
                                 </TableRow>
                               ) : (
-                                bookings.map((booking) => (
-                                  <TableRow key={booking.id} className="hover:bg-muted/50">
-                                    <TableCell>
-                                      <div className="flex items-center space-x-2">
-                                        <User className="h-4 w-4 text-muted-foreground" />
-                                        <div>
-                                          <div className="font-medium">{booking.userEmail}</div>
-                                          <div className="text-xs text-muted-foreground">
-                                            ID: {booking.userId.slice(0, 8)}...
+                                bookings.map((booking) => {
+                                  const isCancelled = booking.status === "cancelled"
+                                  
+                                  return (
+                                    <TableRow key={booking.id} className={`hover:bg-muted/50 ${isCancelled ? 'bg-red-50 border-red-200' : ''}`}>
+                                      <TableCell>
+                                        <div className="flex items-center space-x-2">
+                                          <User className="h-4 w-4 text-muted-foreground" />
+                                          <div>
+                                            <div className={`font-medium ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                                              {booking.userEmail}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                              ID: {booking.userId.slice(0, 8)}...
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="space-y-1">
-                                        <div className="font-medium">{booking.className}</div>
-                                        <div className="flex items-center gap-2">
-                                          {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          {booking.instructor}
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center space-x-2">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                        <span>{formatDate(booking.classDate)}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center space-x-2">
-                                        <Clock className="h-4 w-4 text-muted-foreground" />
-                                        <div>
-                                          <div>{formatTime(booking.classStartTime)}</div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="space-y-1">
+                                          <div className={`font-semibold ${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                                            {isCancelled ? '🚫 ' : ''}{booking.className}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
+                                          </div>
                                           <div className="text-xs text-muted-foreground">
-                                            to {formatTime(booking.classEndTime)}
+                                            {booking.instructor}
                                           </div>
                                         </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      {getStatusBadge(booking.status)}
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {formatDate(booking.bookingDate)}
-                                    </TableCell>
-                                  </TableRow>
-                                ))
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center space-x-2">
+                                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                          <span className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                                            {formatDate(booking.classDate)}
+                                          </span>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center space-x-2">
+                                          <Clock className="h-4 w-4 text-muted-foreground" />
+                                          <div>
+                                            <div className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                                              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex gap-2">
+                                          <Badge
+                                            variant={isCancelled ? "destructive" : (booking.status === "active" ? "default" : "secondary")}
+                                            className="text-xs"
+                                          >
+                                            {isCancelled ? "CANCELLED" : booking.status.toUpperCase()}
+                                          </Badge>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        <div className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
+                                          {formatDate(booking.bookingDate)}
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                })
                               )}
                             </TableBody>
                           </Table>
