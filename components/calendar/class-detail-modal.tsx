@@ -90,8 +90,11 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="font-medium">Capacity</p>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground flex items-center gap-2">
                     {scheduledClass.bookedSpots}/{gymClass.capacity} booked
+                    <span className="inline-flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                      🔴 Live
+                    </span>
                   </p>
                 </div>
               </div>

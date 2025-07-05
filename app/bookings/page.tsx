@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, orderBy, limit, startAfter, where, DocumentSnapshot } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, limit, startAfter, where, DocumentSnapshot, onSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/contexts/AuthContext"
 import LayoutWrapper from "@/components/LayoutWrapper"
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { CalendarIcon, Clock, User, Mail, Loader2, Filter, X, Search, AlertCircle } from "lucide-react"
+import { CalendarIcon, Clock, User, Mail, Loader2, Filter, X, Search, AlertCircle, Wifi, WifiOff } from "lucide-react"
 import { format } from "date-fns"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -63,7 +63,9 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<EnhancedBooking[]>([])
   const [classes, setClasses] = useState<GymClass[]>([])
   const [classesMap, setClassesMap] = useState<Map<string, GymClass>>(new Map())
+  const [allBookings, setAllBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [isRealTimeConnected, setIsRealTimeConnected] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState<string>("")
@@ -78,127 +80,87 @@ export default function BookingsPage() {
   })
   const [error, setError] = useState<string | null>(null)
   
-  const pageSize = 20 // Increased for better performance
+  const pageSize = 20
   const availableCategories = [...new Set(classes.map(cls => cls.category))].sort()
 
-  // Cache for efficient class lookups
-  const fetchClasses = async () => {
-    try {
-      const classesSnapshot = await getDocs(collection(db, "classes"))
-      const classesData: GymClass[] = classesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as GymClass[]
-      
-      console.log(`Loaded ${classesData.length} classes:`, classesData.map(c => ({ id: c.id, name: c.name })))
-      
-      setClasses(classesData)
-      
-      // Create a Map for O(1) lookups
-      const classMap = new Map<string, GymClass>()
-      classesData.forEach(cls => classMap.set(cls.id, cls))
-      setClassesMap(classMap)
-      
-      console.log(`Classes map populated with ${classMap.size} entries`)
-      
-      return classesData
-    } catch (error) {
-      console.error("Error fetching classes:", error)
-      setError("Failed to load class information")
-      return []
-    }
-  }
-
-  const buildQuery = (direction: 'next' | 'previous' | 'first' = 'first') => {
-    const bookingsRef = collection(db, "bookings")
-    let q = query(bookingsRef)
-
-    // Apply filters at database level
-    if (selectedStatus !== "all") {
-      q = query(q, where("status", "==", selectedStatus))
-    }
-
-    // Add search filter (Note: This is limited with Firestore - consider using Algolia for full-text search)
-    if (searchTerm) {
-      // For now, we'll search by email prefix - limited but functional
-      q = query(q, where("userEmail", ">=", searchTerm.toLowerCase()))
-      q = query(q, where("userEmail", "<=", searchTerm.toLowerCase() + "\uf8ff"))
-    }
-
-    // Order by booking date (newest first)
-    q = query(q, orderBy("bookingDate", "desc"))
-
-    // Apply pagination
-    if (direction === 'next' && pagination.lastDoc) {
-      q = query(q, startAfter(pagination.lastDoc))
-    } else if (direction === 'previous' && pagination.firstDoc) {
-      // For previous page, we need to reverse the order and use startAfter
-      q = query(bookingsRef, orderBy("bookingDate", "asc"))
-      if (selectedStatus !== "all") {
-        q = query(q, where("status", "==", selectedStatus))
-      }
-      if (searchTerm) {
-        q = query(q, where("userEmail", ">=", searchTerm.toLowerCase()))
-        q = query(q, where("userEmail", "<=", searchTerm.toLowerCase() + "\uf8ff"))
-      }
-      q = query(q, startAfter(pagination.firstDoc), limit(pageSize))
-    }
-
-    q = query(q, limit(pageSize + 1)) // +1 to check if there's a next page
-
-    return q
-  }
-
-  const fetchBookings = async (direction: 'next' | 'previous' | 'first' = 'first') => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      const q = buildQuery(direction)
-      const querySnapshot = await getDocs(q)
-      
-      if (querySnapshot.empty) {
-        setBookings([])
-        setPagination({
-          hasNextPage: false,
-          hasPreviousPage: false,
-          lastDoc: null,
-          firstDoc: null,
-          currentPage: 1,
-          totalPages: 1,
-          totalCount: 0
-        })
-        return
-      }
-
-      const docs = querySnapshot.docs
-      const hasNextPage = docs.length > pageSize
-      const actualDocs = hasNextPage ? docs.slice(0, pageSize) : docs
-
-      // For previous page queries, reverse the results
-      if (direction === 'previous') {
-        actualDocs.reverse()
-      }
-
-      const bookingsData: EnhancedBooking[] = actualDocs.map((doc) => {
-        const booking = { id: doc.id, ...doc.data() } as Booking
-        const relatedClass = classesMap.get(booking.classId)
+  // Real-time listener for classes
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "classes"),
+      (snapshot) => {
+        const classesData: GymClass[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as GymClass[]
         
-        // Debug logging for missing classes
-        if (!relatedClass) {
-          console.warn(`❌ No class found for classId: ${booking.classId}`, {
-            bookingId: booking.id,
-            userEmail: booking.userEmail,
-            availableClassIds: Array.from(classesMap.keys()),
-            classesMapSize: classesMap.size
-          })
-        } else {
-          console.log(`✅ Found class for booking:`, {
-            bookingId: booking.id,
-            classId: booking.classId,
-            className: relatedClass.name
-          })
-        }
+        console.log(`📡 Real-time classes update: ${classesData.length} classes loaded`)
+        
+        setClasses(classesData)
+        
+        // Create a Map for O(1) lookups
+        const classMap = new Map<string, GymClass>()
+        classesData.forEach(cls => classMap.set(cls.id, cls))
+        setClassesMap(classMap)
+        
+        setIsRealTimeConnected(true)
+      },
+      (error) => {
+        console.error("Real-time classes error:", error)
+        setError("Failed to load class information")
+        setIsRealTimeConnected(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [])
+
+  // Real-time listener for all bookings
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "bookings"),
+      (snapshot) => {
+        const bookingsData: Booking[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Booking[]
+        
+        console.log(`📡 Real-time bookings update: ${bookingsData.length} bookings loaded`)
+        
+        setAllBookings(bookingsData)
+        setIsRealTimeConnected(true)
+      },
+      (error) => {
+        console.error("Real-time bookings error:", error)
+        setError("Failed to load bookings")
+        setIsRealTimeConnected(false)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [])
+
+  // Process bookings when classes or bookings change
+  useEffect(() => {
+    if (classesMap.size > 0 && allBookings.length >= 0) {
+      // Apply filters
+      let filteredBookings = allBookings
+
+      // Search filter
+      if (searchTerm.trim()) {
+        filteredBookings = filteredBookings.filter(booking =>
+          booking.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          booking.userId.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      }
+
+      // Status filter
+      if (selectedStatus !== "all") {
+        filteredBookings = filteredBookings.filter(booking => booking.status === selectedStatus)
+      }
+
+      // Enhance bookings with class information
+      const enhancedBookings: EnhancedBooking[] = filteredBookings.map((booking) => {
+        const relatedClass = classesMap.get(booking.classId)
         
         return {
           ...booking,
@@ -209,85 +171,62 @@ export default function BookingsPage() {
         }
       })
 
-      console.log(`Processed ${bookingsData.length} bookings with class info`)
+      // Category filter (applied after enhancement)
+      const finalBookings = selectedCategory === "all" 
+        ? enhancedBookings 
+        : enhancedBookings.filter(booking => booking.classCategory === selectedCategory)
+
+      // Sort by booking date (newest first)
+      finalBookings.sort((a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime())
+
+      // Simple pagination (client-side for now, but can be optimized later)
+      const startIndex = (pagination.currentPage - 1) * pageSize
+      const endIndex = startIndex + pageSize
+      const paginatedBookings = finalBookings.slice(startIndex, endIndex)
+
+      setBookings(paginatedBookings)
       
-      // Summary of class ID matches
-      const classIdCounts = bookingsData.reduce((acc, booking) => {
-        const originalBooking = { id: booking.id, ...actualDocs.find(doc => doc.id === booking.id)?.data() } as Booking
-        acc[originalBooking.classId] = (acc[originalBooking.classId] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-      
-      console.log('📊 Class ID usage in bookings:', classIdCounts)
-      console.log('📋 Available classes:', Array.from(classesMap.entries()).map(([id, cls]) => ({ id, name: cls.name })))
-
-      // Filter by category on client side (since Firestore doesn't support nested queries easily)
-      const filteredBookings = selectedCategory === "all" 
-        ? bookingsData 
-        : bookingsData.filter(booking => booking.classCategory === selectedCategory)
-
-      setBookings(filteredBookings)
-
       // Update pagination info
-      const newPage = direction === 'next' 
-        ? pagination.currentPage + 1 
-        : direction === 'previous' 
-          ? pagination.currentPage - 1 
-          : 1
+      const totalPages = Math.ceil(finalBookings.length / pageSize)
+      setPagination(prev => ({
+        ...prev,
+        hasNextPage: pagination.currentPage < totalPages,
+        hasPreviousPage: pagination.currentPage > 1,
+        totalPages,
+        totalCount: finalBookings.length
+      }))
 
-      setPagination({
-        hasNextPage: hasNextPage,
-        hasPreviousPage: newPage > 1,
-        lastDoc: actualDocs[actualDocs.length - 1] || null,
-        firstDoc: actualDocs[0] || null,
-        currentPage: newPage,
-        totalPages: Math.max(1, newPage + (hasNextPage ? 1 : 0)), // Approximate
-        totalCount: filteredBookings.length // This is per page, not total
-      })
-
-    } catch (error) {
-      console.error("Error fetching bookings:", error)
-      setError("Failed to load bookings. Please try again.")
-    } finally {
       setLoading(false)
+      
+      console.log(`✅ Processed ${finalBookings.length} bookings, showing ${paginatedBookings.length} on page ${pagination.currentPage}`)
     }
-  }
+  }, [classesMap, allBookings, selectedCategory, selectedStatus, searchTerm, pagination.currentPage])
 
-  // Debounced search to avoid too many queries
+  // Debounced search to avoid too many filter updates
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      // Only fetch bookings if user is authenticated AND classes are loaded
-      if (user && classesMap.size > 0) {
-        fetchBookings('first')
+      // Reset to first page when filters change
+      if (pagination.currentPage !== 1) {
+        setPagination(prev => ({ ...prev, currentPage: 1 }))
       }
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [user, selectedCategory, selectedStatus, searchTerm, classesMap])
-
-  // Initialize classes on mount and fetch bookings when ready
-  useEffect(() => {
-    const loadData = async () => {
-      if (user) {
-        await fetchClasses()
-        // Classes are now loaded, fetchBookings will be triggered by the above useEffect
-      }
-    }
-    
-    loadData()
-  }, [user])
+  }, [selectedCategory, selectedStatus, searchTerm])
 
   const handlePageChange = (direction: 'next' | 'previous') => {
-    // Only paginate if classes are loaded
-    if (classesMap.size > 0) {
-      fetchBookings(direction)
-    }
+    const newPage = direction === 'next' 
+      ? pagination.currentPage + 1 
+      : pagination.currentPage - 1
+    
+    setPagination(prev => ({ ...prev, currentPage: newPage }))
   }
 
   const clearFilters = () => {
     setSelectedCategory("all")
     setSelectedStatus("all")
     setSearchTerm("")
+    setPagination(prev => ({ ...prev, currentPage: 1 }))
   }
 
   const getStatusBadge = (status: string) => {
@@ -372,7 +311,7 @@ export default function BookingsPage() {
             </span>
           </div>
           
-          <div className="text-xs text-muted-foreground pt-2 border-t">
+          <div className="text-xs text-muted-foreground pt-2">
             Instructor: {booking.instructor} • Booked on {formatDate(booking.bookingDate)}
           </div>
         </div>
@@ -410,7 +349,10 @@ export default function BookingsPage() {
       <ProtectedRoute>
         <LayoutWrapper>
           <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-gray-600">Loading bookings...</p>
+            </div>
           </div>
         </LayoutWrapper>
       </ProtectedRoute>
@@ -425,25 +367,48 @@ export default function BookingsPage() {
             <div className="container mx-auto p-6 md:p-8">
               <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900">
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 flex items-center gap-3">
                     Bookings
+                    {isRealTimeConnected ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <Wifi className="h-5 w-5" />
+                        <span className="text-sm font-normal">Live</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-600">
+                        <WifiOff className="h-5 w-5" />
+                        <span className="text-sm font-normal">Offline</span>
+                      </div>
+                    )}
                   </h1>
                   <p className="text-gray-700">
-                    View and manage class bookings with advanced filtering
+                    View and manage class bookings with real-time updates
                   </p>
                 </div>
                 <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
-                  <div className="text-sm text-gray-600">Current Page</div>
-                  <div className="text-2xl font-bold text-gray-900">{bookings.length} bookings</div>
+                  <div className="text-sm text-gray-600">Total Found</div>
+                  <div className="text-2xl font-bold text-gray-900">{pagination.totalCount} bookings</div>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="container mx-auto p-4 md:p-8">
+          <div className="container mx-auto py-6 space-y-6">
+            {/* Real-time connection status */}
+            {!isRealTimeConnected && (
+              <Alert className="border-amber-200 bg-amber-50">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700">
+                  Real-time updates are currently disconnected. Data may not be current.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Tabs defaultValue="all-bookings" className="w-full">
               <TabsList className="mb-6 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
-                <TabsTrigger value="all-bookings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">All Bookings</TabsTrigger>
+                <TabsTrigger value="all-bookings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">
+                  All Bookings {isRealTimeConnected && <span className="ml-2 text-xs">🔴 LIVE</span>}
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="all-bookings">
@@ -451,29 +416,17 @@ export default function BookingsPage() {
                   <CardHeader className="pb-4">
                     <CardTitle>Class Bookings</CardTitle>
                     <CardDescription>
-                      Efficiently browse through all booking records with server-side filtering
+                      Real-time booking records with automatic updates when changes occur
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {error && (
-                      <Alert className="mb-4" variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-
-                    {/* Enhanced Filter Controls */}
-                    <div className="flex flex-col gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-700">Filter & Search:</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <div className="space-y-4">
+                      {/* Enhanced Filters */}
+                      <div className="flex flex-col md:flex-row gap-4">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input
-                            placeholder="Search by email..."
+                            placeholder="Search by user email or ID..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-10"
@@ -481,7 +434,7 @@ export default function BookingsPage() {
                         </div>
                         
                         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full md:w-48">
                             <SelectValue placeholder="All Class Types" />
                           </SelectTrigger>
                           <SelectContent>
@@ -495,7 +448,7 @@ export default function BookingsPage() {
                         </Select>
                         
                         <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full md:w-40">
                             <SelectValue placeholder="All Statuses" />
                           </SelectTrigger>
                           <SelectContent>
@@ -507,47 +460,55 @@ export default function BookingsPage() {
                           </SelectContent>
                         </Select>
                         
-                        {(selectedCategory !== "all" || selectedStatus !== "all" || searchTerm) && (
-                          <Button 
-                            variant="outline" 
-                            onClick={clearFilters}
-                            className="whitespace-nowrap"
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Clear All
-                          </Button>
-                        )}
+                        <Button 
+                          variant="outline" 
+                          onClick={clearFilters}
+                          className="whitespace-nowrap"
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Clear
+                        </Button>
                       </div>
-                    </div>
 
-                    {bookings.length === 0 && !loading ? (
-                      <div className="flex flex-col items-center justify-center py-16">
-                        <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No bookings found</h3>
-                        <p className="text-muted-foreground text-center">
-                          {selectedCategory !== "all" || selectedStatus !== "all" || searchTerm
-                            ? "No bookings match your current filters. Try adjusting your search criteria."
-                            : "There are no bookings to display at the moment."
-                          }
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {/* Mobile View - Cards */}
-                        <div className="md:hidden space-y-4">
+                      {error && (
+                        <Alert className="border-red-200 bg-red-50">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertDescription className="text-red-700">
+                            {error}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Responsive Display */}
+                      <div className="block md:hidden">
+                        {/* Mobile Card View */}
+                        <div className="grid gap-4">
                           {loading ? (
-                            Array.from({ length: 5 }).map((_, index) => (
-                              <LoadingCard key={`loading-card-${index}`} />
+                            Array.from({ length: 3 }).map((_, index) => (
+                              <LoadingCard key={`loading-${index}`} />
                             ))
+                          ) : bookings.length === 0 ? (
+                            <div className="text-center py-8">
+                              <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
+                              <p className="text-gray-600">
+                                {searchTerm || selectedCategory !== "all" || selectedStatus !== "all"
+                                  ? "Try adjusting your filters"
+                                  : "No bookings have been made yet"
+                                }
+                              </p>
+                            </div>
                           ) : (
                             bookings.map((booking) => (
                               <BookingCard key={booking.id} booking={booking} />
                             ))
                           )}
                         </div>
+                      </div>
 
-                        {/* Desktop View - Table */}
-                        <div className="hidden md:block">
+                      <div className="hidden md:block">
+                        {/* Desktop Table View */}
+                        <div className="rounded-md border">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -571,6 +532,15 @@ export default function BookingsPage() {
                                     <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
                                   </TableRow>
                                 ))
+                              ) : bookings.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="text-center py-8">
+                                    <div className="flex flex-col items-center space-y-2">
+                                      <CalendarIcon className="h-8 w-8 text-gray-400" />
+                                      <p className="text-gray-600">No bookings found</p>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
                               ) : (
                                 bookings.map((booking) => (
                                   <TableRow key={booking.id} className="hover:bg-muted/50">
@@ -625,33 +595,38 @@ export default function BookingsPage() {
                             </TableBody>
                           </Table>
                         </div>
+                      </div>
                         
-                        {/* Improved Pagination */}
-                        <div className="flex justify-between items-center py-4">
+                      {/* Enhanced Pagination */}
+                      {pagination.totalCount > 0 && (
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t">
                           <div className="text-sm text-gray-600">
-                            Page {pagination.currentPage} • {bookings.length} results
+                            Showing {Math.min((pagination.currentPage - 1) * pageSize + 1, pagination.totalCount)} to {Math.min(pagination.currentPage * pageSize, pagination.totalCount)} of {pagination.totalCount} results
                           </div>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handlePageChange('previous')}
-                              disabled={!pagination.hasPreviousPage || loading}
+                              disabled={!pagination.hasPreviousPage}
                             >
                               Previous
                             </Button>
+                            <div className="flex items-center gap-2 px-3 py-1 text-sm">
+                              Page {pagination.currentPage} of {pagination.totalPages}
+                            </div>
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handlePageChange('next')}
-                              disabled={!pagination.hasNextPage || loading}
+                              disabled={!pagination.hasNextPage}
                             >
                               Next
                             </Button>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

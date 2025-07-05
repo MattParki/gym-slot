@@ -7,7 +7,7 @@ import { DayDetailModal } from "./day-detail-modal"
 import { ClassDetailModal } from "./class-detail-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"
+import { collection, getDocs, deleteDoc, doc, onSnapshot, query, where } from "firebase/firestore"
 import { useEffect } from "react"
 import { addDoc } from "firebase/firestore"
 import toast from "react-hot-toast"
@@ -33,6 +33,18 @@ export type ScheduledClass = {
   startTime: string
   endTime: string
   bookedSpots: number
+}
+
+// Define booking type for real-time updates
+interface Booking {
+  id: string
+  scheduledClassId: string
+  classId: string
+  userId: string
+  userEmail: string
+  status: string
+  bookingDate: string
+  classDate: string
 }
 
 // Sample gym classes
@@ -74,6 +86,7 @@ const initialClasses: GymClass[] = [
 export function GymBookingSystem() {
   const [classes, setClasses] = useState<GymClass[]>([])
   const [scheduledClasses, setScheduledClasses] = useState<ScheduledClass[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedClass, setSelectedClass] = useState<{ gymClass: GymClass; scheduled: ScheduledClass } | null>(null)
 
@@ -91,10 +104,11 @@ export function GymBookingSystem() {
     return classWithId;
   };
 
+  // Real-time listener for classes
   useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "classes"))
+    const unsubscribe = onSnapshot(
+      collection(db, "classes"),
+      (snapshot) => {
         const loaded: GymClass[] = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -110,14 +124,21 @@ export function GymBookingSystem() {
         }, [])
 
         setClasses(uniqueClasses)
-      } catch (err) {
-        console.error("Failed to load gym classes:", err)
+        console.log("📡 Real-time classes update:", uniqueClasses.length, "classes loaded")
+      },
+      (error) => {
+        console.error("Failed to load gym classes:", error)
       }
-    }
+    )
 
-    const fetchScheduledClasses = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "scheduledClasses"))
+    return () => unsubscribe()
+  }, [])
+
+  // Real-time listener for scheduled classes
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "scheduledClasses"),
+      (snapshot) => {
         const loaded: ScheduledClass[] = snapshot.docs.map((doc) => {
           const data = doc.data()
           const dateObj =
@@ -136,15 +157,70 @@ export function GymBookingSystem() {
         })
 
         setScheduledClasses(loaded)
-      } catch (err) {
-        console.error("Failed to load scheduled classes:", err)
+        console.log("📡 Real-time scheduled classes update:", loaded.length, "scheduled classes loaded")
+      },
+      (error) => {
+        console.error("Failed to load scheduled classes:", error)
       }
-    }
+    )
 
-    fetchClasses()
-    fetchScheduledClasses()
+    return () => unsubscribe()
   }, [])
 
+  // Real-time listener for bookings to update booking counts
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "bookings"),
+      (snapshot) => {
+        const loaded: Booking[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Booking[]
+
+        setBookings(loaded)
+        console.log("📡 Real-time bookings update:", loaded.length, "bookings loaded")
+      },
+      (error) => {
+        console.error("Failed to load bookings:", error)
+      }
+    )
+
+    return () => unsubscribe()
+  }, [])
+
+  // Update scheduled classes with real-time booking counts
+  useEffect(() => {
+    if (scheduledClasses.length > 0 && bookings.length >= 0) {
+      const updatedScheduledClasses = scheduledClasses.map((scheduled) => {
+        // Count active bookings for this scheduled class
+        const activeBookings = bookings.filter(
+          (booking) =>
+            booking.scheduledClassId === scheduled.id &&
+            booking.status === "active"
+        ).length
+
+        // Only update if the count has changed
+        if (activeBookings !== scheduled.bookedSpots) {
+          console.log(`📊 Updating booking count for scheduled class ${scheduled.id}: ${scheduled.bookedSpots} → ${activeBookings}`)
+          return {
+            ...scheduled,
+            bookedSpots: activeBookings,
+          }
+        }
+        return scheduled
+      })
+
+      // Only update state if there are actual changes
+      const hasChanges = updatedScheduledClasses.some(
+        (updated, index) => updated.bookedSpots !== scheduledClasses[index].bookedSpots
+      )
+
+      if (hasChanges) {
+        setScheduledClasses(updatedScheduledClasses)
+        console.log("✅ Scheduled classes updated with real-time booking counts")
+      }
+    }
+  }, [bookings, scheduledClasses])
 
   const handleUpdateClass = (updatedClass: GymClass) => {
     setClasses((prev) => {
@@ -169,10 +245,9 @@ export function GymBookingSystem() {
       // Delete from Firestore
       await deleteDoc(doc(db, "classes", classId))
       
-      // Update local state
-      setClasses(classes.filter((cls) => cls.id !== classId))
-      // Also remove any scheduled instances of this class
-      setScheduledClasses(scheduledClasses.filter((scheduled) => scheduled.classId !== classId))
+      // Update local state - but this will be handled by the real-time listener
+      // setClasses(classes.filter((cls) => cls.id !== classId))
+      // setScheduledClasses(scheduledClasses.filter((scheduled) => scheduled.classId !== classId))
       
       toast.success("Class deleted successfully")
     } catch (error) {
@@ -227,7 +302,7 @@ export function GymBookingSystem() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="calendar" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
           <TabsTrigger value="calendar" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">Calendar View</TabsTrigger>
           <TabsTrigger value="classes" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">Manage Classes</TabsTrigger>
         </TabsList>
