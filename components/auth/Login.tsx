@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import toast from 'react-hot-toast';
-import { MailIcon } from "lucide-react";
+import { MailIcon, LogIn, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
@@ -30,7 +31,7 @@ export default function Login() {
       await login(email, password);
   
       toast.dismiss(loadingToast);
-      toast.success(`Hi there!`, {
+      toast.success(`Welcome back!`, {
         icon: "👋",
       });
   
@@ -56,37 +57,99 @@ export default function Login() {
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl text-center">Log In</CardTitle>
+    <Card className="w-full max-w-md mx-auto bg-white/95 backdrop-blur-md border-white/20 shadow-2xl">
+      <CardHeader className="text-center pb-4">
+        <div className="mx-auto mb-4 h-16 w-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-full flex items-center justify-center">
+          <LogIn className="h-8 w-8 text-white" />
+        </div>
+        <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+        <p className="text-gray-600 text-sm mt-2">
+          Sign in to your account to continue
+        </p>
       </CardHeader>
-      <CardContent>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+      <CardContent className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-gray-700 font-medium">
+              Email Address
+            </Label>
             <Input
               id="email"
               type="email"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <Label htmlFor="password" className="text-gray-700 font-medium">
+              Password
+            </Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <Eye className="h-4 w-4 text-gray-500" />
+                )}
+              </Button>
+            </div>
           </div>
-          <Button type="submit" disabled={loading} className="w-full bg-[#141E33]">
-            {loading ? "Logging in..." : "Log In"}
+          
+          <Button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full h-11 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Signing in...
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </div>
+            )}
           </Button>
         </form>
+        
+        <div className="text-center pt-4 border-t border-gray-200">
+          <p className="text-gray-600 text-sm">
+            Don't have an account?{" "}
+            <button
+              onClick={() => router.push("/signup")}
+              className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
+            >
+              Create one here
+            </button>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
