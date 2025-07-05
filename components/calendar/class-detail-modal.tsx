@@ -60,59 +60,54 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
 
     const emailPromises = bookedUsers.map(async (booking) => {
       try {
-        const response = await fetch("/api/send-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            to: booking.userEmail,
-            subject: `Class Cancelled: ${className} on ${classDate}`,
-            html: `
-              <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-                <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">Class Cancelled</h1>
-                  <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
-                    We're sorry for any inconvenience
-                  </p>
+        const emailData = {
+          to: booking.userEmail,
+          subject: `Class Cancelled: ${className} on ${classDate}`,
+          html: `
+            <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+              <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">Class Cancelled</h1>
+                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                  We're sorry for any inconvenience
+                </p>
+              </div>
+              
+              <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                  Unfortunately, your booked class has been cancelled:
+                </p>
+                
+                <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin: 20px 0;">
+                  <h3 style="color: #111827; margin: 0 0 10px 0; font-size: 18px;">${className}</h3>
+                  <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Date:</strong> ${classDate}</p>
+                  <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Time:</strong> ${classTime}</p>
+                  <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Instructor:</strong> ${gymClass.instructor}</p>
                 </div>
                 
-                <div style="background: white; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
-                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                    Unfortunately, your booked class has been cancelled:
-                  </p>
-                  
-                  <div style="background: #f9fafb; padding: 20px; border-radius: 6px; margin: 20px 0;">
-                    <h3 style="color: #111827; margin: 0 0 10px 0; font-size: 18px;">${className}</h3>
-                    <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Date:</strong> ${classDate}</p>
-                    <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Time:</strong> ${classTime}</p>
-                    <p style="color: #6b7280; margin: 5px 0; font-size: 14px;"><strong>Instructor:</strong> ${gymClass.instructor}</p>
+                ${reason ? `
+                  <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                    <h4 style="color: #92400e; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Cancellation Reason:</h4>
+                    <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.5;">${reason}</p>
                   </div>
-                  
-                  ${reason ? `
-                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                      <h4 style="color: #92400e; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Cancellation Reason:</h4>
-                      <p style="color: #92400e; margin: 0; font-size: 14px; line-height: 1.5;">${reason}</p>
-                    </div>
-                  ` : ''}
-                  
-                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                    Your booking has been automatically cancelled and you will not be charged for this class.
+                ` : ''}
+                
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                  Your booking has been automatically cancelled and you will not be charged for this class.
+                </p>
+                
+                <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                  We apologize for any inconvenience this may cause. Please check our schedule for alternative classes.
+                </p>
+                
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                  <p style="color: #6b7280; font-size: 14px; margin: 0; text-align: center;">
+                    Need help? Contact us at support@gym-slot.com
                   </p>
-                  
-                  <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-                    We apologize for any inconvenience this may cause. Please check our schedule for alternative classes.
-                  </p>
-                  
-                  <div style="background: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
-                    <p style="color: #6b7280; font-size: 14px; margin: 0; text-align: center;">
-                      Need help? Contact us at support@gym-slot.com
-                    </p>
-                  </div>
                 </div>
               </div>
-            `,
-            text: `
+            </div>
+          `,
+          text: `
 Class Cancelled: ${className}
 
 Unfortunately, your booked class has been cancelled:
@@ -129,15 +124,36 @@ Your booking has been automatically cancelled and you will not be charged for th
 We apologize for any inconvenience this may cause. Please check our schedule for alternative classes.
 
 Need help? Contact us at support@gym-slot.com
-            `,
-          }),
+          `,
+        }
+
+        console.log(`📧 Sending cancellation email to ${booking.userEmail}:`, {
+          to: emailData.to,
+          subject: emailData.subject,
+          textLength: emailData.text.length,
+          htmlLength: emailData.html.length
+        })
+
+        const response = await fetch("/api/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(emailData),
         })
 
         if (!response.ok) {
-          throw new Error(`Failed to send email to ${booking.userEmail}`)
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+          console.error(`❌ Email API error for ${booking.userEmail}:`, {
+            status: response.status,
+            statusText: response.statusText,
+            errorData
+          })
+          throw new Error(`Failed to send email to ${booking.userEmail}: ${errorData.error || response.statusText}`)
         }
 
-        console.log(`✅ Cancellation email sent to ${booking.userEmail}`)
+        const result = await response.json()
+        console.log(`✅ Cancellation email sent to ${booking.userEmail}`, result)
       } catch (error) {
         console.error(`❌ Failed to send email to ${booking.userEmail}:`, error)
         throw error
