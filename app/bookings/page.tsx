@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, limit, startAfter, where, DocumentSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { useAuth } from "@/contexts/AuthContext"
 import LayoutWrapper from "@/components/LayoutWrapper"
@@ -9,11 +9,13 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Pagination } from "@/components/ui/pagination"  
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon, Clock, User, Mail, Loader2 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { CalendarIcon, Clock, User, Mail, Loader2, Filter, X, Search, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Booking {
   id: string
@@ -28,60 +30,264 @@ interface Booking {
   userId: string
 }
 
+interface GymClass {
+  id: string
+  name: string
+  description: string
+  category: string
+  instructor: string
+  color: string
+  capacity: number
+  duration: number
+}
+
+interface EnhancedBooking extends Booking {
+  className?: string
+  classCategory?: string
+  classColor?: string
+  instructor?: string
+}
+
+interface PaginationInfo {
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+  lastDoc: DocumentSnapshot | null
+  firstDoc: DocumentSnapshot | null
+  currentPage: number
+  totalPages: number
+  totalCount: number
+}
+
 export default function BookingsPage() {
   const { user } = useAuth()
-  const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookings, setBookings] = useState<EnhancedBooking[]>([])
+  const [classes, setClasses] = useState<GymClass[]>([])
+  const [classesMap, setClassesMap] = useState<Map<string, GymClass>>(new Map())
   const [loading, setLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalBookings, setTotalBookings] = useState(0)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedStatus, setSelectedStatus] = useState<string>("all")
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    hasNextPage: false,
+    hasPreviousPage: false,
+    lastDoc: null,
+    firstDoc: null,
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0
+  })
+  const [error, setError] = useState<string | null>(null)
   
-  const pageSize = 10
-  const totalPages = Math.ceil(totalBookings / pageSize)
+  const pageSize = 20 // Increased for better performance
+  const availableCategories = [...new Set(classes.map(cls => cls.category))].sort()
 
-  const fetchBookings = async (page: number = 1) => {
+  // Cache for efficient class lookups
+  const fetchClasses = async () => {
     try {
-      setLoading(true)
-      const bookingsRef = collection(db, "bookings")
-      
-      // Calculate offset for the page
-      const offset = (page - 1) * pageSize
-      
-      // For simplicity, we'll fetch all bookings and slice them
-      // In a production app, you'd want server-side pagination
-      const q = query(bookingsRef, orderBy("bookingDate", "desc"))
-      const querySnapshot = await getDocs(q)
-      
-      const allBookings: Booking[] = querySnapshot.docs.map((doc) => ({
+      const classesSnapshot = await getDocs(collection(db, "classes"))
+      const classesData: GymClass[] = classesSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as Booking[]
+      })) as GymClass[]
+      
+      console.log(`Loaded ${classesData.length} classes:`, classesData.map(c => ({ id: c.id, name: c.name })))
+      
+      setClasses(classesData)
+      
+      // Create a Map for O(1) lookups
+      const classMap = new Map<string, GymClass>()
+      classesData.forEach(cls => classMap.set(cls.id, cls))
+      setClassesMap(classMap)
+      
+      console.log(`Classes map populated with ${classMap.size} entries`)
+      
+      return classesData
+    } catch (error) {
+      console.error("Error fetching classes:", error)
+      setError("Failed to load class information")
+      return []
+    }
+  }
 
-      // Set total count
-      setTotalBookings(allBookings.length)
+  const buildQuery = (direction: 'next' | 'previous' | 'first' = 'first') => {
+    const bookingsRef = collection(db, "bookings")
+    let q = query(bookingsRef)
+
+    // Apply filters at database level
+    if (selectedStatus !== "all") {
+      q = query(q, where("status", "==", selectedStatus))
+    }
+
+    // Add search filter (Note: This is limited with Firestore - consider using Algolia for full-text search)
+    if (searchTerm) {
+      // For now, we'll search by email prefix - limited but functional
+      q = query(q, where("userEmail", ">=", searchTerm.toLowerCase()))
+      q = query(q, where("userEmail", "<=", searchTerm.toLowerCase() + "\uf8ff"))
+    }
+
+    // Order by booking date (newest first)
+    q = query(q, orderBy("bookingDate", "desc"))
+
+    // Apply pagination
+    if (direction === 'next' && pagination.lastDoc) {
+      q = query(q, startAfter(pagination.lastDoc))
+    } else if (direction === 'previous' && pagination.firstDoc) {
+      // For previous page, we need to reverse the order and use startAfter
+      q = query(bookingsRef, orderBy("bookingDate", "asc"))
+      if (selectedStatus !== "all") {
+        q = query(q, where("status", "==", selectedStatus))
+      }
+      if (searchTerm) {
+        q = query(q, where("userEmail", ">=", searchTerm.toLowerCase()))
+        q = query(q, where("userEmail", "<=", searchTerm.toLowerCase() + "\uf8ff"))
+      }
+      q = query(q, startAfter(pagination.firstDoc), limit(pageSize))
+    }
+
+    q = query(q, limit(pageSize + 1)) // +1 to check if there's a next page
+
+    return q
+  }
+
+  const fetchBookings = async (direction: 'next' | 'previous' | 'first' = 'first') => {
+    try {
+      setLoading(true)
+      setError(null)
       
-      // Get the bookings for the current page
-      const pageBookings = allBookings.slice(offset, offset + pageSize)
-      setBookings(pageBookings)
+      const q = buildQuery(direction)
+      const querySnapshot = await getDocs(q)
       
+      if (querySnapshot.empty) {
+        setBookings([])
+        setPagination({
+          hasNextPage: false,
+          hasPreviousPage: false,
+          lastDoc: null,
+          firstDoc: null,
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 0
+        })
+        return
+      }
+
+      const docs = querySnapshot.docs
+      const hasNextPage = docs.length > pageSize
+      const actualDocs = hasNextPage ? docs.slice(0, pageSize) : docs
+
+      // For previous page queries, reverse the results
+      if (direction === 'previous') {
+        actualDocs.reverse()
+      }
+
+      const bookingsData: EnhancedBooking[] = actualDocs.map((doc) => {
+        const booking = { id: doc.id, ...doc.data() } as Booking
+        const relatedClass = classesMap.get(booking.classId)
+        
+        // Debug logging for missing classes
+        if (!relatedClass) {
+          console.warn(`❌ No class found for classId: ${booking.classId}`, {
+            bookingId: booking.id,
+            userEmail: booking.userEmail,
+            availableClassIds: Array.from(classesMap.keys()),
+            classesMapSize: classesMap.size
+          })
+        } else {
+          console.log(`✅ Found class for booking:`, {
+            bookingId: booking.id,
+            classId: booking.classId,
+            className: relatedClass.name
+          })
+        }
+        
+        return {
+          ...booking,
+          className: relatedClass?.name || `Unknown Class (ID: ${booking.classId})`,
+          classCategory: relatedClass?.category || 'Unknown',
+          classColor: relatedClass?.color || '#6b7280',
+          instructor: relatedClass?.instructor || 'Unknown Instructor'
+        }
+      })
+
+      console.log(`Processed ${bookingsData.length} bookings with class info`)
+      
+      // Summary of class ID matches
+      const classIdCounts = bookingsData.reduce((acc, booking) => {
+        const originalBooking = { id: booking.id, ...actualDocs.find(doc => doc.id === booking.id)?.data() } as Booking
+        acc[originalBooking.classId] = (acc[originalBooking.classId] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      
+      console.log('📊 Class ID usage in bookings:', classIdCounts)
+      console.log('📋 Available classes:', Array.from(classesMap.entries()).map(([id, cls]) => ({ id, name: cls.name })))
+
+      // Filter by category on client side (since Firestore doesn't support nested queries easily)
+      const filteredBookings = selectedCategory === "all" 
+        ? bookingsData 
+        : bookingsData.filter(booking => booking.classCategory === selectedCategory)
+
+      setBookings(filteredBookings)
+
+      // Update pagination info
+      const newPage = direction === 'next' 
+        ? pagination.currentPage + 1 
+        : direction === 'previous' 
+          ? pagination.currentPage - 1 
+          : 1
+
+      setPagination({
+        hasNextPage: hasNextPage,
+        hasPreviousPage: newPage > 1,
+        lastDoc: actualDocs[actualDocs.length - 1] || null,
+        firstDoc: actualDocs[0] || null,
+        currentPage: newPage,
+        totalPages: Math.max(1, newPage + (hasNextPage ? 1 : 0)), // Approximate
+        totalCount: filteredBookings.length // This is per page, not total
+      })
+
     } catch (error) {
       console.error("Error fetching bookings:", error)
+      setError("Failed to load bookings. Please try again.")
     } finally {
       setLoading(false)
     }
   }
 
+  // Debounced search to avoid too many queries
   useEffect(() => {
-    if (user) {
-      fetchBookings(1)
-      setCurrentPage(1)
+    const timeoutId = setTimeout(() => {
+      // Only fetch bookings if user is authenticated AND classes are loaded
+      if (user && classesMap.size > 0) {
+        fetchBookings('first')
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [user, selectedCategory, selectedStatus, searchTerm, classesMap])
+
+  // Initialize classes on mount and fetch bookings when ready
+  useEffect(() => {
+    const loadData = async () => {
+      if (user) {
+        await fetchClasses()
+        // Classes are now loaded, fetchBookings will be triggered by the above useEffect
+      }
     }
+    
+    loadData()
   }, [user])
 
-  const handlePageChange = (page: number) => {
-    if (page === currentPage) return
-    
-    setCurrentPage(page)
-    fetchBookings(page)
+  const handlePageChange = (direction: 'next' | 'previous') => {
+    // Only paginate if classes are loaded
+    if (classesMap.size > 0) {
+      fetchBookings(direction)
+    }
+  }
+
+  const clearFilters = () => {
+    setSelectedCategory("all")
+    setSelectedStatus("all")
+    setSearchTerm("")
   }
 
   const getStatusBadge = (status: string) => {
@@ -95,6 +301,22 @@ export default function BookingsPage() {
     return (
       <Badge variant="outline" className={statusColors[status] || "bg-gray-100 text-gray-800 border-gray-200"}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    )
+  }
+
+  const getCategoryBadge = (category: string, color: string) => {
+    return (
+      <Badge 
+        variant="outline" 
+        className="border-opacity-50"
+        style={{ 
+          backgroundColor: `${color}20`, 
+          borderColor: color,
+          color: color 
+        }}
+      >
+        {category}
       </Badge>
     )
   }
@@ -119,7 +341,7 @@ export default function BookingsPage() {
     }
   }
 
-  const BookingCard = ({ booking }: { booking: Booking }) => (
+  const BookingCard = ({ booking }: { booking: EnhancedBooking }) => (
     <Card className="w-full hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-3">
@@ -129,6 +351,13 @@ export default function BookingsPage() {
               <span className="font-medium text-sm">{booking.userEmail}</span>
             </div>
             {getStatusBadge(booking.status)}
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold text-sm">{booking.className}</span>
+            </div>
+            {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -144,7 +373,7 @@ export default function BookingsPage() {
           </div>
           
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            Booked on {formatDate(booking.bookingDate)}
+            Instructor: {booking.instructor} • Booked on {formatDate(booking.bookingDate)}
           </div>
         </div>
       </CardContent>
@@ -200,12 +429,12 @@ export default function BookingsPage() {
                     Bookings
                   </h1>
                   <p className="text-gray-700">
-                    View and manage all class bookings
+                    View and manage class bookings with advanced filtering
                   </p>
                 </div>
                 <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
-                  <div className="text-sm text-gray-600">Total Bookings</div>
-                  <div className="text-2xl font-bold text-gray-900">{totalBookings}</div>
+                  <div className="text-sm text-gray-600">Current Page</div>
+                  <div className="text-2xl font-bold text-gray-900">{bookings.length} bookings</div>
                 </div>
               </div>
             </div>
@@ -222,16 +451,84 @@ export default function BookingsPage() {
                   <CardHeader className="pb-4">
                     <CardTitle>Class Bookings</CardTitle>
                     <CardDescription>
-                      All booking records for your gym classes
+                      Efficiently browse through all booking records with server-side filtering
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    {error && (
+                      <Alert className="mb-4" variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Enhanced Filter Controls */}
+                    <div className="flex flex-col gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Filter & Search:</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search by email..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                        
+                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All Class Types" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Class Types</SelectItem>
+                            {availableCategories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All Statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        {(selectedCategory !== "all" || selectedStatus !== "all" || searchTerm) && (
+                          <Button 
+                            variant="outline" 
+                            onClick={clearFilters}
+                            className="whitespace-nowrap"
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
                     {bookings.length === 0 && !loading ? (
                       <div className="flex flex-col items-center justify-center py-16">
                         <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
                         <h3 className="text-lg font-semibold mb-2">No bookings found</h3>
                         <p className="text-muted-foreground text-center">
-                          There are no bookings to display at the moment.
+                          {selectedCategory !== "all" || selectedStatus !== "all" || searchTerm
+                            ? "No bookings match your current filters. Try adjusting your search criteria."
+                            : "There are no bookings to display at the moment."
+                          }
                         </p>
                       </div>
                     ) : (
@@ -239,7 +536,7 @@ export default function BookingsPage() {
                         {/* Mobile View - Cards */}
                         <div className="md:hidden space-y-4">
                           {loading ? (
-                            Array.from({ length: pageSize }).map((_, index) => (
+                            Array.from({ length: 5 }).map((_, index) => (
                               <LoadingCard key={`loading-card-${index}`} />
                             ))
                           ) : (
@@ -254,8 +551,9 @@ export default function BookingsPage() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead className="w-[250px]">User</TableHead>
-                                <TableHead>Class Date</TableHead>
+                                <TableHead className="w-[200px]">User</TableHead>
+                                <TableHead className="w-[200px]">Class</TableHead>
+                                <TableHead>Date</TableHead>
                                 <TableHead>Time</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Booked On</TableHead>
@@ -263,24 +561,14 @@ export default function BookingsPage() {
                             </TableHeader>
                             <TableBody>
                               {loading ? (
-                                // Loading skeleton rows
-                                Array.from({ length: pageSize }).map((_, index) => (
+                                Array.from({ length: 5 }).map((_, index) => (
                                   <TableRow key={`skeleton-${index}`}>
-                                    <TableCell>
-                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="h-4 bg-muted animate-pulse rounded"></div>
-                                    </TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
+                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
                                   </TableRow>
                                 ))
                               ) : (
@@ -294,6 +582,17 @@ export default function BookingsPage() {
                                           <div className="text-xs text-muted-foreground">
                                             ID: {booking.userId.slice(0, 8)}...
                                           </div>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="space-y-1">
+                                        <div className="font-medium">{booking.className}</div>
+                                        <div className="flex items-center gap-2">
+                                          {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          {booking.instructor}
                                         </div>
                                       </div>
                                     </TableCell>
@@ -327,17 +626,30 @@ export default function BookingsPage() {
                           </Table>
                         </div>
                         
-                        {totalPages > 1 && (
-                          <div className="flex justify-center py-4">
-                            <Pagination
-                              currentPage={currentPage}
-                              totalPages={totalPages}
-                              onPageChange={handlePageChange}
-                              loading={loading}
-                              mode="pages"
-                            />
+                        {/* Improved Pagination */}
+                        <div className="flex justify-between items-center py-4">
+                          <div className="text-sm text-gray-600">
+                            Page {pagination.currentPage} • {bookings.length} results
                           </div>
-                        )}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange('previous')}
+                              disabled={!pagination.hasPreviousPage || loading}
+                            >
+                              Previous
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange('next')}
+                              disabled={!pagination.hasNextPage || loading}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </CardContent>
