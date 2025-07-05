@@ -48,6 +48,7 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
+  const [emailProgress, setEmailProgress] = useState({ sent: 0, total: 0, isLoading: false })
   
   const availableSpots = gymClass.capacity - scheduledClass.bookedSpots
   const isFullyBooked = availableSpots <= 0
@@ -58,7 +59,16 @@ export function ClassDetailModal({ isOpen, onClose, gymClass, scheduledClass, on
     const classDate = format(new Date(scheduledClass.date), "EEEE, MMMM d, yyyy")
     const classTime = `${scheduledClass.startTime} - ${scheduledClass.endTime}`
 
-    const emailPromises = bookedUsers.map(async (booking) => {
+    // Initialize progress
+    setEmailProgress({ sent: 0, total: bookedUsers.length, isLoading: true })
+
+    let successCount = 0
+    const errors: string[] = []
+
+    // Send emails one by one to track progress
+    for (let i = 0; i < bookedUsers.length; i++) {
+      const booking = bookedUsers[i]
+      
       try {
         const emailData = {
           from: "noreply@gym-slot.com",
@@ -128,12 +138,7 @@ Need help? Contact us at support@gym-slot.com
           `,
         }
 
-        console.log(`📧 Sending cancellation email to ${booking.userEmail}:`, {
-          to: emailData.to,
-          subject: emailData.subject,
-          textLength: emailData.text.length,
-          htmlLength: emailData.html.length
-        })
+        console.log(`📧 Sending cancellation email ${i + 1}/${bookedUsers.length} to ${booking.userEmail}`)
 
         const response = await fetch("/api/send-email", {
           method: "POST",
@@ -150,18 +155,35 @@ Need help? Contact us at support@gym-slot.com
             statusText: response.statusText,
             errorData
           })
-          throw new Error(`Failed to send email to ${booking.userEmail}: ${errorData.error || response.statusText}`)
+          errors.push(`${booking.userEmail}: ${errorData.error || response.statusText}`)
+        } else {
+          const result = await response.json()
+          console.log(`✅ Cancellation email sent to ${booking.userEmail}`, result)
+          successCount++
         }
-
-        const result = await response.json()
-        console.log(`✅ Cancellation email sent to ${booking.userEmail}`, result)
       } catch (error) {
         console.error(`❌ Failed to send email to ${booking.userEmail}:`, error)
-        throw error
+        errors.push(`${booking.userEmail}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
-    })
 
-    await Promise.all(emailPromises)
+      // Update progress
+      setEmailProgress({ sent: i + 1, total: bookedUsers.length, isLoading: i + 1 < bookedUsers.length })
+      
+      // Small delay between emails to be nice to the email service
+      if (i < bookedUsers.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+
+    // Reset progress state
+    setEmailProgress({ sent: 0, total: 0, isLoading: false })
+
+    if (errors.length > 0) {
+      console.error('Email sending errors:', errors)
+      throw new Error(`Some emails failed: ${errors.join(', ')}`)
+    }
+
+    return { successCount, totalCount: bookedUsers.length }
   }
 
   const handleCancelClass = async () => {
@@ -209,8 +231,8 @@ Need help? Contact us at support@gym-slot.com
       // 4. Send cancellation emails to all booked users
       if (bookedUsers.length > 0) {
         try {
-          await sendCancellationEmails(bookedUsers, cancellationReason.trim())
-          toast.success(`Class cancelled and ${bookedUsers.length} users notified by email`)
+          const emailResults = await sendCancellationEmails(bookedUsers, cancellationReason.trim())
+          toast.success(`Class cancelled and ${emailResults.successCount}/${emailResults.totalCount} users notified by email`)
         } catch (emailError) {
           console.error("Some emails failed to send:", emailError)
           toast.success(`Class cancelled, but some email notifications may have failed`)
@@ -401,6 +423,25 @@ Need help? Contact us at support@gym-slot.com
                       </div>
                     )}
 
+                    {/* Email sending progress */}
+                    {emailProgress.isLoading && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                          <span className="font-medium text-blue-800">Sending Email Notifications</span>
+                        </div>
+                        <p className="text-sm text-blue-700 mb-2">
+                          Sending cancellation emails to users... ({emailProgress.sent}/{emailProgress.total})
+                        </p>
+                        <div className="w-full bg-blue-100 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${(emailProgress.sent / emailProgress.total) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label htmlFor="cancellation-reason" className="text-sm font-medium">
                         Reason for cancellation *
@@ -412,6 +453,7 @@ Need help? Contact us at support@gym-slot.com
                         onChange={(e) => setCancellationReason(e.target.value)}
                         rows={3}
                         className="text-sm"
+                        disabled={isCancelling}
                       />
                       <p className="text-xs text-muted-foreground">
                         This reason will be included in the email notifications sent to participants.
@@ -420,7 +462,7 @@ Need help? Contact us at support@gym-slot.com
                   </div>
                   
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isCancelling}>
+                    <AlertDialogCancel disabled={isCancelling || emailProgress.isLoading}>
                       Keep Class
                     </AlertDialogCancel>
                     <AlertDialogAction
@@ -429,10 +471,17 @@ Need help? Contact us at support@gym-slot.com
                       className="bg-red-600 hover:bg-red-700"
                     >
                       {isCancelling ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Cancelling...
-                        </>
+                        emailProgress.isLoading ? (
+                          <>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Sending Emails ({emailProgress.sent}/{emailProgress.total})
+                          </>
+                        ) : (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Cancelling...
+                          </>
+                        )
                       ) : (
                         <>
                           <Ban className="mr-2 h-4 w-4" />
