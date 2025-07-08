@@ -270,7 +270,7 @@ export default function MembersPage() {
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
           <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg">
-            <div className="container mx-auto p-6 md:p-8">
+            <div className="container mx-auto p-4 md:p-8">
               <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold mb-2">
@@ -288,7 +288,7 @@ export default function MembersPage() {
             </div>
           </div>
           
-          <div className="container mx-auto p-4 md:p-8">
+          <div className="container mx-auto px-2 md:p-8">
             <Tabs defaultValue="all-members" className="w-full">
               
               <TabsContent value="all-members">

@@ -47,7 +47,7 @@ export default function Home() {
           <>
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white">
-              <div className="container mx-auto px-8 py-16 md:py-20">
+              <div className="container mx-auto px-4 py-16 md:px-8 md:py-20">
                 <div className="max-w-4xl mx-auto text-center">
                   <Badge className="mb-6 bg-green-500/20 text-green-400 border-green-500/30">
                     Complete Gym Management Solution
@@ -79,7 +79,7 @@ export default function Home() {
 
             {/* Key Features Overview */}
             <div className="py-20 bg-gray-50">
-              <div className="container mx-auto px-8">
+              <div className="container mx-auto px-4 md:px-8">
                 <div className="text-center mb-16">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
                     Everything Your Gym Business Needs
@@ -135,7 +135,7 @@ export default function Home() {
 
             {/* Mobile App Showcase */}
             <div className="py-20 bg-white">
-              <div className="container mx-auto px-8">
+              <div className="container mx-auto px-4 md:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                   <div>
                     <Badge className="mb-4 bg-blue-100 text-blue-700 border-blue-200">
@@ -191,7 +191,7 @@ export default function Home() {
 
             {/* CRM & Management Features */}
             <div className="py-20 bg-gray-50">
-              <div className="container mx-auto px-8">
+              <div className="container mx-auto px-4 md:px-8">
                 <div className="text-center mb-16">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
                     Powerful Business Management Tools
@@ -278,7 +278,7 @@ export default function Home() {
 
             {/* Benefits Section */}
             <div className="py-20 bg-white">
-              <div className="container mx-auto px-8">
+              <div className="container mx-auto px-4 md:px-8">
                 <div className="text-center mb-16">
                   <h2 className="text-4xl font-bold text-gray-900 mb-4">
                     Why Choose GymSlot?
@@ -318,7 +318,7 @@ export default function Home() {
 
             {/* Final CTA */}
             <div className="py-20 bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white">
-              <div className="container mx-auto px-8 text-center">
+              <div className="container mx-auto px-4 md:px-8 text-center">
                 <h2 className="text-4xl font-bold mb-6">
                   Ready to Transform Your Gym?
                 </h2>
@@ -344,7 +344,7 @@ export default function Home() {
           <>
             {/* Header with action button for logged-in users */}
             <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg">
-              <div className="container mx-auto px-4 py-6">
+              <div className="container mx-auto px-2 md:px-4 py-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h1 className="text-3xl md:text-4xl font-bold text-white">
@@ -368,7 +368,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="container py-6">
+            <div className="container px-2 md:px-6 py-6">
               <GymBookingSystem />
             </div>
           </>

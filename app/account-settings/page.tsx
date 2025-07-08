@@ -66,14 +66,14 @@ export default function AccountSettingsPage() {
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
           <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg shadow-sm">
-            <div className="container mx-auto p-8 md:py-8">
+            <div className="container mx-auto p-4 md:p-8 md:py-8">
               <h1 className="text-4xl md:text-4xl font-bold mb-4 text-white">
                 Account Settings
               </h1>
             </div>
           </div>
           
-          <div className="container mx-auto p-4 md:p-8">
+          <div className="container mx-auto px-2 md:p-8">
             <Tabs defaultValue="profile" className="w-full">
               <TabsList className="mb-6 h-auto bg-gray-50 border border-gray-200 rounded-lg">
                 <TabsTrigger 

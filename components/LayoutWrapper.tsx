@@ -31,7 +31,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
       <main 
         className={`flex-1 transition-all duration-300 ${
           !isMobile && isSidebarOpen ? 'md:ml-72' : !isMobile ? 'md:ml-20' : ''
-        } p-6 pb-20 md:pb-6`}
+        } px-2 py-4 pb-20 md:p-6 md:pb-6`}
       >
         {children}
       </main>

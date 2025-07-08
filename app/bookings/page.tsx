@@ -290,7 +290,7 @@ export default function BookingsPage() {
     const isCancelled = booking.status === "cancelled"
     
     return (
-      <div className={`flex items-center p-3 border rounded-lg hover:shadow-sm transition-all duration-150 border-l-4 ${
+      <div className={`border rounded-lg hover:shadow-sm transition-all duration-150 border-l-4 ${
         isCancelled 
           ? 'bg-red-50/50 border-l-red-400 border-red-200' 
           : booking.status === 'active'
@@ -299,81 +299,161 @@ export default function BookingsPage() {
           ? 'bg-yellow-50/30 border-l-yellow-400 border-gray-200'
           : 'bg-white border-l-blue-400 border-gray-200'
       }`}>
-        {/* User Info */}
-        <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-            isCancelled 
-              ? 'bg-red-100' 
-              : booking.status === 'active'
-              ? 'bg-green-100'
-              : 'bg-blue-100'
-          }`}>
-            <User className={`h-4 w-4 ${
+        {/* Desktop Layout */}
+        <div className="hidden md:flex items-center p-3">
+          {/* User Info */}
+          <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
               isCancelled 
-                ? 'text-red-600' 
+                ? 'bg-red-100' 
                 : booking.status === 'active'
-                ? 'text-green-600'
-                : 'text-blue-600'
-            }`} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-              {booking.userEmail}
+                ? 'bg-green-100'
+                : 'bg-blue-100'
+            }`}>
+              <User className={`h-4 w-4 ${
+                isCancelled 
+                  ? 'text-red-600' 
+                  : booking.status === 'active'
+                  ? 'text-green-600'
+                  : 'text-blue-600'
+              }`} />
             </div>
-            <div className="text-xs text-gray-500 truncate">
-              ID: {booking.userId.slice(0, 8)}...
+            <div className="min-w-0 flex-1">
+              <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                {booking.userEmail}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                ID: {booking.userId.slice(0, 8)}...
+              </div>
+            </div>
+          </div>
+
+          {/* Class Info */}
+          <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
+            <div className="min-w-0 flex-1">
+              <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                {isCancelled ? '🚫 ' : ''}{booking.className}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {booking.instructor}
+              </div>
+            </div>
+          </div>
+
+          {/* Date & Time */}
+          <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
+            <div className="min-w-0 flex-1">
+              <div className={`text-sm ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                {formatDate(booking.classDate)}
+              </div>
+              <div className={`text-xs ${isCancelled ? 'line-through text-gray-400' : 'text-gray-500'}`}>
+                {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+              </div>
+            </div>
+          </div>
+
+          {/* Status & Actions */}
+          <div className="flex items-center space-x-3" style={{ width: '180px' }}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-2 mb-1">
+                {getStatusBadge(booking.status)}
+                {/* Cancellation reason inline */}
+                {isCancelled && booking.cancellationReason && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-xs text-red-600 truncate cursor-help">
+                          ({booking.cancellationReason})
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs">{booking.cancellationReason}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {formatDate(booking.bookingDate)}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Class Info */}
-        <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
-          <div className="min-w-0 flex-1">
-            <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-              {isCancelled ? '🚫 ' : ''}{booking.className}
+        {/* Mobile Layout */}
+        <div className="md:hidden p-4">
+          <div className="space-y-3">
+            {/* Header Row - Customer & Status */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3 min-w-0 flex-1 mr-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  isCancelled 
+                    ? 'bg-red-100' 
+                    : booking.status === 'active'
+                    ? 'bg-green-100'
+                    : 'bg-blue-100'
+                }`}>
+                  <User className={`h-5 w-5 ${
+                    isCancelled 
+                      ? 'text-red-600' 
+                      : booking.status === 'active'
+                      ? 'text-green-600'
+                      : 'text-blue-600'
+                  }`} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`font-medium text-base truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                    {booking.userEmail}
+                  </div>
+                  <div className="text-sm text-gray-500 truncate">
+                    {booking.userId.slice(0, 8)}...
+                  </div>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                {getStatusBadge(booking.status)}
+              </div>
             </div>
-            <div className="text-xs text-gray-500 truncate">
-              {booking.instructor}
-            </div>
-          </div>
-        </div>
 
-        {/* Date & Time */}
-        <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
-          <div className="min-w-0 flex-1">
-            <div className={`text-sm ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-              {formatDate(booking.classDate)}
+            {/* Class Info Row */}
+            <div className="bg-gray-50/50 rounded-lg p-3">
+              <div className={`font-semibold text-lg ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                {isCancelled ? '🚫 ' : ''}{booking.className}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                with {booking.instructor}
+              </div>
             </div>
-            <div className={`text-xs ${isCancelled ? 'line-through text-gray-400' : 'text-gray-500'}`}>
-              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
-            </div>
-          </div>
-        </div>
 
-        {/* Status & Actions */}
-        <div className="flex items-center space-x-3" style={{ width: '180px' }}>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-2 mb-1">
-              {getStatusBadge(booking.status)}
-              {/* Cancellation reason inline */}
-              {isCancelled && booking.cancellationReason && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="text-xs text-red-600 truncate cursor-help">
-                        ({booking.cancellationReason})
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">{booking.cancellationReason}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+            {/* Date & Time Row */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className={`text-sm font-medium ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  {formatDate(booking.classDate)}
+                </div>
+                <div className={`text-xs ${isCancelled ? 'line-through text-gray-400' : 'text-gray-500'}`}>
+                  {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-500">Booked</div>
+                <div className="text-xs text-gray-400">
+                  {formatDate(booking.bookingDate)}
+                </div>
+              </div>
             </div>
-            <div className="text-xs text-gray-500 truncate">
-              {formatDate(booking.bookingDate)}
-            </div>
+
+            {/* Cancellation Reason Row (if applicable) */}
+            {isCancelled && booking.cancellationReason && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <div className="text-sm text-red-700">
+                  <span className="font-medium">Cancellation reason:</span>
+                </div>
+                <div className="text-sm text-red-600 mt-1">
+                  {booking.cancellationReason}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -381,39 +461,77 @@ export default function BookingsPage() {
   }
 
   const LoadingCard = () => (
-    <div className="flex items-center p-3 border rounded-lg border-l-4 border-l-gray-300 border-gray-200">
-      {/* User Info Skeleton */}
-      <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
-        <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full flex-shrink-0"></div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
-        </div>
-      </div>
-
-      {/* Class Info Skeleton */}
-      <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="h-4 w-28 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-3 w-24 bg-gray-200 animate-pulse rounded"></div>
-        </div>
-      </div>
-
-      {/* Date & Time Skeleton */}
-      <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
-          <div className="h-3 w-32 bg-gray-200 animate-pulse rounded"></div>
-        </div>
-      </div>
-
-      {/* Status & Date Skeleton */}
-      <div className="flex items-center space-x-3" style={{ width: '180px' }}>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center space-x-2 mb-1">
-            <div className="h-6 w-16 bg-gray-200 animate-pulse rounded-full"></div>
+    <div className="border rounded-lg border-l-4 border-l-gray-300 border-gray-200">
+      {/* Desktop Loading Layout */}
+      <div className="hidden md:flex items-center p-3">
+        {/* User Info Skeleton */}
+        <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
+          <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full flex-shrink-0"></div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
           </div>
-          <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+
+        {/* Class Info Skeleton */}
+        <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="h-4 w-28 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-3 w-24 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </div>
+
+        {/* Date & Time Skeleton */}
+        <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-3 w-32 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </div>
+
+        {/* Status & Date Skeleton */}
+        <div className="flex items-center space-x-3" style={{ width: '180px' }}>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-2 mb-1">
+              <div className="h-6 w-16 bg-gray-200 animate-pulse rounded-full"></div>
+            </div>
+            <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Loading Layout */}
+      <div className="md:hidden p-4">
+        <div className="space-y-3">
+          {/* Header Row Skeleton */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3 min-w-0 flex-1 mr-3">
+              <div className="w-10 h-10 bg-gray-200 animate-pulse rounded-full flex-shrink-0"></div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="h-4 w-40 bg-gray-200 animate-pulse rounded"></div>
+                <div className="h-3 w-24 bg-gray-200 animate-pulse rounded"></div>
+              </div>
+            </div>
+            <div className="h-6 w-16 bg-gray-200 animate-pulse rounded-full flex-shrink-0"></div>
+          </div>
+
+          {/* Class Info Skeleton */}
+          <div className="bg-gray-50/50 rounded-lg p-3 space-y-2">
+            <div className="h-5 w-32 bg-gray-200 animate-pulse rounded"></div>
+            <div className="h-4 w-28 bg-gray-200 animate-pulse rounded"></div>
+          </div>
+
+          {/* Date & Time Skeleton */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-3 w-32 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+            <div className="text-right space-y-1">
+              <div className="h-3 w-12 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-3 w-16 bg-gray-200 animate-pulse rounded"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -440,7 +558,7 @@ export default function BookingsPage() {
         <div className="min-h-screen">
           {/* Header Section */}
           <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg shadow-sm mb-8">
-            <div className="container mx-auto p-8">
+            <div className="container mx-auto p-4 md:p-8">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
                 <div className="space-y-3">
                   <h1 className="text-4xl font-bold text-white flex items-center gap-3">
@@ -472,7 +590,7 @@ export default function BookingsPage() {
             </div>
           </div>
           
-          <div className="container mx-auto space-y-8">
+          <div className="container mx-auto px-2 md:px-0 space-y-8">
             {/* Real-time connection status */}
             {!isRealTimeConnected && (
               <Alert className="border-amber-200 bg-amber-50">
