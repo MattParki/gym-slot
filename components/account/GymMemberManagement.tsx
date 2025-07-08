@@ -383,14 +383,39 @@ export default function GymMemberManagement() {
       return
     }
 
+    // Validate expiration date
+    if (!formData.expirationDate.trim()) {
+      toast.error("Please select an expiration date for the membership")
+      return
+    }
+
+    // Validate that the expiration date is a valid date
+    const expirationDate = new Date(formData.expirationDate)
+    if (isNaN(expirationDate.getTime())) {
+      toast.error("Please enter a valid expiration date")
+      return
+    }
+
+    // Validate join date
+    if (!formData.joinDate.trim()) {
+      toast.error("Please select a join date")
+      return
+    }
+
+    const joinDate = new Date(formData.joinDate)
+    if (isNaN(joinDate.getTime())) {
+      toast.error("Please enter a valid join date")
+      return
+    }
+
     setLoading(true)
 
     try {
       const memberData = {
         ...formData,
         businessId,
-        joinDate: new Date(formData.joinDate),
-        expirationDate: new Date(formData.expirationDate),
+        joinDate,
+        expirationDate,
         emergencyContact: formData.emergencyContact,
         updatedAt: new Date()
       }
@@ -1069,7 +1094,7 @@ export default function GymMemberManagement() {
                 <Checkbox
                   id="sendInvite"
                   checked={sendInviteEmail}
-                  onCheckedChange={setSendInviteEmail}
+                  onCheckedChange={(checked) => setSendInviteEmail(checked === true)}
                 />
                 <Label htmlFor="sendInvite" className="text-sm">
                   Send invitation email to customer (they can create an account to use the mobile app)
@@ -1107,7 +1132,7 @@ export default function GymMemberManagement() {
               
               <div className="space-y-2">
                 <Label>New Status</Label>
-                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as typeof membershipStatuses[number])}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

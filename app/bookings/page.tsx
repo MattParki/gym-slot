@@ -8,14 +8,14 @@ import LayoutWrapper from "@/components/LayoutWrapper"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { CalendarIcon, Clock, User, Mail, Loader2, Filter, X, Search, AlertCircle, Wifi, WifiOff } from "lucide-react"
+import { CalendarIcon, Clock, User, Mail, Loader2, Filter, X, Search, AlertCircle, Wifi, WifiOff, MapPin, UserCheck, Calendar } from "lucide-react"
 import { format } from "date-fns"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface Booking {
   id: string
@@ -82,7 +82,7 @@ export default function BookingsPage() {
   })
   const [error, setError] = useState<string | null>(null)
   
-  const pageSize = 20
+  const pageSize = 50
   const availableCategories = [...new Set(classes.map(cls => cls.category))].sort()
 
   // Real-time listener for classes
@@ -199,60 +199,44 @@ export default function BookingsPage() {
       }))
 
       setLoading(false)
-      
-      console.log(`✅ Processed ${finalBookings.length} bookings, showing ${paginatedBookings.length} on page ${pagination.currentPage}`)
     }
-  }, [classesMap, allBookings, selectedCategory, selectedStatus, searchTerm, pagination.currentPage])
-
-  // Debounced search to avoid too many filter updates
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      // Reset to first page when filters change
-      if (pagination.currentPage !== 1) {
-        setPagination(prev => ({ ...prev, currentPage: 1 }))
-      }
-    }, 300)
-
-    return () => clearTimeout(timeoutId)
-  }, [selectedCategory, selectedStatus, searchTerm])
+  }, [classesMap, allBookings, searchTerm, selectedCategory, selectedStatus, pagination.currentPage])
 
   const handlePageChange = (direction: 'next' | 'previous') => {
-    const newPage = direction === 'next' 
-      ? pagination.currentPage + 1 
-      : pagination.currentPage - 1
-    
-    setPagination(prev => ({ ...prev, currentPage: newPage }))
+    setPagination(prev => ({
+      ...prev,
+      currentPage: direction === 'next' ? prev.currentPage + 1 : prev.currentPage - 1
+    }))
   }
 
   const clearFilters = () => {
+    setSearchTerm("")
     setSelectedCategory("all")
     setSelectedStatus("all")
-    setSearchTerm("")
-    setPagination(prev => ({ ...prev, currentPage: 1 }))
   }
 
   const getStatusBadge = (status: string) => {
-    const statusColors: { [key: string]: string } = {
-      active: "bg-green-100 text-green-800 border-green-200",
-      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      cancelled: "bg-red-100 text-red-800 border-red-200",
-      completed: "bg-blue-100 text-blue-800 border-blue-200",
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Active</Badge>
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>
+      case "completed":
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completed</Badge>
+      default:
+        return <Badge variant="secondary">{status}</Badge>
     }
-
-    return (
-      <Badge variant="outline" className={statusColors[status] || "bg-gray-100 text-gray-800 border-gray-200"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    )
   }
 
   const getCategoryBadge = (category: string, color: string) => {
     return (
       <Badge 
         variant="outline" 
-        className="border-opacity-50"
+        className="text-xs font-medium border-gray-200"
         style={{ 
-          backgroundColor: `${color}20`, 
+          backgroundColor: `${color}15`, 
           borderColor: color,
           color: color 
         }}
@@ -263,39 +247,37 @@ export default function BookingsPage() {
   }
 
   const formatDate = (timestamp: any) => {
-    if (!timestamp) return "N/A";
-
     try {
-      let date: Date;
+      if (!timestamp) return 'Unknown Date'
       
-      // Handle Firestore Timestamp objects
-      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
-        date = timestamp.toDate();
-      } 
-      // Handle Firestore Timestamp objects with seconds property
-      else if (timestamp.seconds) {
-        date = new Date(timestamp.seconds * 1000);
-      } 
-      // Handle regular date strings/objects
-      else {
-        date = new Date(timestamp);
+      let date: Date
+      
+      if (typeof timestamp === 'string') {
+        date = new Date(timestamp)
+      } else if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate()
+      } else if (timestamp instanceof Date) {
+        date = timestamp
+      } else if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000)
+      } else {
+        return 'Invalid Date'
       }
-
+      
       if (isNaN(date.getTime())) {
-        return "Invalid Date";
+        return 'Invalid Date'
       }
-
-      return format(date, "MMM d, yyyy")
-    } catch {
-      return "Invalid Date"
+      
+      return format(date, "MMM dd, yyyy")
+    } catch (error) {
+      console.error('Error formatting date:', error, timestamp)
+      return 'Error'
     }
   }
 
   const formatTime = (timeString: string) => {
-    if (!timeString) return "N/A";
-    
     try {
-      const [hours, minutes] = timeString.split(":")
+      const [hours, minutes] = timeString.split(':')
       const date = new Date()
       date.setHours(parseInt(hours), parseInt(minutes))
       return format(date, "h:mm a")
@@ -304,96 +286,137 @@ export default function BookingsPage() {
     }
   }
 
-  const BookingCard = ({ booking }: { booking: EnhancedBooking }) => {
+  const EnhancedBookingCard = ({ booking }: { booking: EnhancedBooking }) => {
     const isCancelled = booking.status === "cancelled"
     
     return (
-      <Card className={`w-full hover:shadow-md transition-shadow ${isCancelled ? 'bg-red-50 border-red-200' : ''}`}>
-        <CardContent className="p-4">
-          <div className="flex flex-col space-y-3">
-            <div className="flex justify-between items-start">
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className={`font-medium text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                  {booking.userEmail}
-                </span>
-              </div>
-              <Badge
-                variant={isCancelled ? "destructive" : (booking.status === "active" ? "default" : "secondary")}
-                className="text-xs"
-              >
-                {isCancelled ? "CANCELLED" : booking.status.toUpperCase()}
-              </Badge>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className={`font-semibold text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                  {isCancelled ? '🚫 ' : ''}{booking.className}
-                </span>
-              </div>
-              {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <span className={`text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                {formatDate(booking.classDate)}
-              </span>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className={`text-sm ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
-              </span>
-            </div>
-            
-            <div className={`text-xs text-muted-foreground pt-2 ${isCancelled ? 'line-through' : ''}`}>
-              Instructor: {booking.instructor} • Booked on {formatDate(booking.bookingDate)}
-            </div>
-            
-            {isCancelled && booking.cancellationReason && (
-              <div className="mt-2 p-2 bg-red-100 border border-red-200 rounded text-xs">
-                <p className="text-red-700">
-                  <strong>Cancellation Reason:</strong> {booking.cancellationReason}
-                </p>
-                {booking.cancelledAt && (
-                  <p className="text-red-600 mt-1">
-                    Cancelled on {formatDate(booking.cancelledAt)}
-                  </p>
-                )}
-              </div>
-            )}
+      <div className={`flex items-center p-3 border rounded-lg hover:shadow-sm transition-all duration-150 border-l-4 ${
+        isCancelled 
+          ? 'bg-red-50/50 border-l-red-400 border-red-200' 
+          : booking.status === 'active'
+          ? 'bg-green-50/30 border-l-green-400 border-gray-200'
+          : booking.status === 'pending'
+          ? 'bg-yellow-50/30 border-l-yellow-400 border-gray-200'
+          : 'bg-white border-l-blue-400 border-gray-200'
+      }`}>
+        {/* User Info */}
+        <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isCancelled 
+              ? 'bg-red-100' 
+              : booking.status === 'active'
+              ? 'bg-green-100'
+              : 'bg-blue-100'
+          }`}>
+            <User className={`h-4 w-4 ${
+              isCancelled 
+                ? 'text-red-600' 
+                : booking.status === 'active'
+                ? 'text-green-600'
+                : 'text-blue-600'
+            }`} />
           </div>
-        </CardContent>
-      </Card>
+          <div className="min-w-0 flex-1">
+            <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+              {booking.userEmail}
+            </div>
+            <div className="text-xs text-gray-500 truncate">
+              ID: {booking.userId.slice(0, 8)}...
+            </div>
+          </div>
+        </div>
+
+        {/* Class Info */}
+        <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
+          <div className="min-w-0 flex-1">
+            <div className={`font-medium text-sm truncate ${isCancelled ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+              {isCancelled ? '🚫 ' : ''}{booking.className}
+            </div>
+            <div className="text-xs text-gray-500 truncate">
+              {booking.instructor}
+            </div>
+          </div>
+        </div>
+
+        {/* Date & Time */}
+        <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
+          <div className="min-w-0 flex-1">
+            <div className={`text-sm ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+              {formatDate(booking.classDate)}
+            </div>
+            <div className={`text-xs ${isCancelled ? 'line-through text-gray-400' : 'text-gray-500'}`}>
+              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
+            </div>
+          </div>
+        </div>
+
+        {/* Status & Actions */}
+        <div className="flex items-center space-x-3" style={{ width: '180px' }}>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center space-x-2 mb-1">
+              {getStatusBadge(booking.status)}
+              {/* Cancellation reason inline */}
+              {isCancelled && booking.cancellationReason && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-xs text-red-600 truncate cursor-help">
+                        ({booking.cancellationReason})
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">{booking.cancellationReason}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 truncate">
+              {formatDate(booking.bookingDate)}
+            </div>
+          </div>
+        </div>
+      </div>
     )
   }
 
   const LoadingCard = () => (
-    <Card className="w-full">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center space-x-2">
-              <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
-              <div className="h-4 w-32 bg-muted animate-pulse rounded"></div>
-            </div>
-            <div className="h-6 w-16 bg-muted animate-pulse rounded-full"></div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
-            <div className="h-4 w-24 bg-muted animate-pulse rounded"></div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="h-4 w-4 bg-muted animate-pulse rounded"></div>
-            <div className="h-4 w-28 bg-muted animate-pulse rounded"></div>
-          </div>
-          <div className="h-3 w-20 bg-muted animate-pulse rounded pt-2"></div>
+    <div className="flex items-center p-3 border rounded-lg border-l-4 border-l-gray-300 border-gray-200">
+      {/* User Info Skeleton */}
+      <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>
+        <div className="w-8 h-8 bg-gray-200 animate-pulse rounded-full flex-shrink-0"></div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="h-4 w-32 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Class Info Skeleton */}
+      <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="h-4 w-28 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-3 w-24 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </div>
+
+      {/* Date & Time Skeleton */}
+      <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="h-4 w-24 bg-gray-200 animate-pulse rounded"></div>
+          <div className="h-3 w-32 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </div>
+
+      {/* Status & Date Skeleton */}
+      <div className="flex items-center space-x-3" style={{ width: '180px' }}>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center space-x-2 mb-1">
+            <div className="h-6 w-16 bg-gray-200 animate-pulse rounded-full"></div>
+          </div>
+          <div className="h-3 w-20 bg-gray-200 animate-pulse rounded"></div>
+        </div>
+      </div>
+    </div>
   )
 
   if (loading && bookings.length === 0) {
@@ -414,38 +437,42 @@ export default function BookingsPage() {
   return (
     <ProtectedRoute>
       <LayoutWrapper>
-        <div className="min-h-screen flex flex-col">
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 rounded-lg shadow-sm">
-            <div className="container mx-auto p-6 md:p-8">
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-2 text-gray-900 flex items-center gap-3">
-                    Bookings
+        <div className="min-h-screen">
+          {/* Header Section */}
+          <div className="bg-gradient-to-br from-blue-50 via-white to-green-50 border border-gray-200 rounded-xl shadow-sm mb-8">
+            <div className="container mx-auto p-8">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
+                <div className="space-y-3">
+                  <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+                    📋 Bookings
                     {isRealTimeConnected ? (
                       <div className="flex items-center gap-2 text-green-600">
                         <Wifi className="h-5 w-5" />
-                        <span className="text-sm font-normal">Live</span>
+                        <span className="text-sm font-normal bg-green-100 px-2 py-1 rounded-full">Live</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-red-600">
                         <WifiOff className="h-5 w-5" />
-                        <span className="text-sm font-normal">Offline</span>
+                        <span className="text-sm font-normal bg-red-100 px-2 py-1 rounded-full">Offline</span>
                       </div>
                     )}
                   </h1>
-                  <p className="text-gray-700">
-                    View and manage class bookings with real-time updates
+                  <p className="text-lg text-gray-600 max-w-2xl">
+                    Monitor and manage class bookings with real-time updates and detailed customer information
                   </p>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-4 py-2 shadow-sm">
-                  <div className="text-sm text-gray-600">Total Found</div>
-                  <div className="text-2xl font-bold text-gray-900">{pagination.totalCount} bookings</div>
+                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-1">Total Found</div>
+                    <div className="text-3xl font-bold text-gray-900">{pagination.totalCount}</div>
+                    <div className="text-sm text-gray-500">bookings</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="container mx-auto py-6 space-y-6">
+          <div className="container mx-auto space-y-8">
             {/* Real-time connection status */}
             {!isRealTimeConnected && (
               <Alert className="border-amber-200 bg-amber-50">
@@ -456,247 +483,157 @@ export default function BookingsPage() {
               </Alert>
             )}
 
-            <Tabs defaultValue="all-bookings" className="w-full">
-             
-              
-              <TabsContent value="all-bookings">
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle>Class Bookings</CardTitle>
-                    <CardDescription>
+            <Card className="shadow-sm">
+              <CardHeader className="border-b bg-gray-50/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Class Bookings</CardTitle>
+                    <CardDescription className="text-base">
                       Real-time booking records with automatic updates when changes occur
                     </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {/* Enhanced Filters */}
-                      <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            placeholder="Search by user email or ID..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                          />
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Page {pagination.currentPage} of {pagination.totalPages}
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  {/* Enhanced Filters */}
+                  <div className="bg-gray-50/50 rounded-lg p-4 space-y-4">
+                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Search & Filter
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div className="relative md:col-span-2">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search by email or user ID..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 bg-white"
+                        />
+                      </div>
+                      
+                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="All Class Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Class Types</SelectItem>
+                          {availableCategories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="All Statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {(searchTerm || selectedCategory !== "all" || selectedStatus !== "all") && (
+                      <Button 
+                        variant="outline" 
+                        onClick={clearFilters}
+                        className="w-full md:w-auto"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear All Filters
+                      </Button>
+                    )}
+                  </div>
+
+                  {error && (
+                    <Alert className="border-red-200 bg-red-50">
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertDescription className="text-red-700">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Column Headers */}
+                  <div className="hidden md:flex items-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider border-b bg-gray-50/50">
+                    <div className="flex items-center space-x-3 min-w-0" style={{ width: '280px' }}>Customer</div>
+                    <div className="flex items-center space-x-4 min-w-0" style={{ width: '300px' }}>Class Details</div>
+                    <div className="flex items-center space-x-4 min-w-0" style={{ width: '200px' }}>Date & Time</div>
+                    <div className="flex items-center space-x-3" style={{ width: '180px' }}>Status & Details</div>
+                  </div>
+
+                  {/* Bookings List */}
+                  <div className="space-y-2">
+                    {loading ? (
+                      Array.from({ length: 8 }).map((_, index) => (
+                        <LoadingCard key={`loading-${index}`} />
+                      ))
+                    ) : bookings.length === 0 ? (
+                      <div className="text-center py-16">
+                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <CalendarIcon className="h-12 w-12 text-gray-400" />
                         </div>
-                        
-                        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                          <SelectTrigger className="w-full md:w-48">
-                            <SelectValue placeholder="All Class Types" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Class Types</SelectItem>
-                            {availableCategories.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                          <SelectTrigger className="w-full md:w-40">
-                            <SelectValue placeholder="All Statuses" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        <Button 
-                          variant="outline" 
-                          onClick={clearFilters}
-                          className="whitespace-nowrap"
+                        <h3 className="text-xl font-semibold text-gray-900 mb-3">No bookings found</h3>
+                        <p className="text-gray-600 max-w-md mx-auto">
+                          {searchTerm || selectedCategory !== "all" || selectedStatus !== "all"
+                            ? "Try adjusting your search criteria or filters to find more results."
+                            : "No bookings have been made yet. Bookings will appear here as customers book classes."
+                          }
+                        </p>
+                      </div>
+                    ) : (
+                      bookings.map((booking) => (
+                        <EnhancedBookingCard key={booking.id} booking={booking} />
+                      ))
+                    )}
+                  </div>
+                    
+                  {/* Enhanced Pagination */}
+                  {pagination.totalCount > 0 && (
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t">
+                      <div className="text-sm text-gray-600">
+                        Showing {Math.min((pagination.currentPage - 1) * pageSize + 1, pagination.totalCount)} to {Math.min(pagination.currentPage * pageSize, pagination.totalCount)} of {pagination.totalCount} results
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange('previous')}
+                          disabled={!pagination.hasPreviousPage}
+                          className="min-w-20"
                         >
-                          <X className="h-4 w-4 mr-2" />
-                          Clear
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-2 px-3 py-1 text-sm bg-gray-50 rounded-md">
+                          Page {pagination.currentPage} of {pagination.totalPages}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange('next')}
+                          disabled={!pagination.hasNextPage}
+                          className="min-w-20"
+                        >
+                          Next
                         </Button>
                       </div>
-
-                      {error && (
-                        <Alert className="border-red-200 bg-red-50">
-                          <AlertCircle className="h-4 w-4 text-red-600" />
-                          <AlertDescription className="text-red-700">
-                            {error}
-                          </AlertDescription>
-                        </Alert>
-                      )}
-
-                      {/* Responsive Display */}
-                      <div className="block md:hidden">
-                        {/* Mobile Card View */}
-                        <div className="grid gap-4">
-                          {loading ? (
-                            Array.from({ length: 3 }).map((_, index) => (
-                              <LoadingCard key={`loading-${index}`} />
-                            ))
-                          ) : bookings.length === 0 ? (
-                            <div className="text-center py-8">
-                              <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">No bookings found</h3>
-                              <p className="text-gray-600">
-                                {searchTerm || selectedCategory !== "all" || selectedStatus !== "all"
-                                  ? "Try adjusting your filters"
-                                  : "No bookings have been made yet"
-                                }
-                              </p>
-                            </div>
-                          ) : (
-                            bookings.map((booking) => (
-                              <BookingCard key={booking.id} booking={booking} />
-                            ))
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="hidden md:block">
-                        {/* Desktop Table View */}
-                        <div className="rounded-md border">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-[200px]">User</TableHead>
-                                <TableHead className="w-[200px]">Class</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Time</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Booked On</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {loading ? (
-                                Array.from({ length: 5 }).map((_, index) => (
-                                  <TableRow key={`skeleton-${index}`}>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                    <TableCell><div className="h-4 bg-muted animate-pulse rounded"></div></TableCell>
-                                  </TableRow>
-                                ))
-                              ) : bookings.length === 0 ? (
-                                <TableRow>
-                                  <TableCell colSpan={6} className="text-center py-8">
-                                    <div className="flex flex-col items-center space-y-2">
-                                      <CalendarIcon className="h-8 w-8 text-gray-400" />
-                                      <p className="text-gray-600">No bookings found</p>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ) : (
-                                bookings.map((booking) => {
-                                  const isCancelled = booking.status === "cancelled"
-                                  
-                                  return (
-                                    <TableRow key={booking.id} className={`hover:bg-muted/50 ${isCancelled ? 'bg-red-50 border-red-200' : ''}`}>
-                                      <TableCell>
-                                        <div className="flex items-center space-x-2">
-                                          <User className="h-4 w-4 text-muted-foreground" />
-                                          <div>
-                                            <div className={`font-medium ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                                              {booking.userEmail}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                              ID: {booking.userId.slice(0, 8)}...
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="space-y-1">
-                                          <div className={`font-semibold ${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                                            {isCancelled ? '🚫 ' : ''}{booking.className}
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            {getCategoryBadge(booking.classCategory || 'Unknown', booking.classColor || '#gray')}
-                                          </div>
-                                          <div className="text-xs text-muted-foreground">
-                                            {booking.instructor}
-                                          </div>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex items-center space-x-2">
-                                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                          <span className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                                            {formatDate(booking.classDate)}
-                                          </span>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex items-center space-x-2">
-                                          <Clock className="h-4 w-4 text-muted-foreground" />
-                                          <div>
-                                            <div className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                                              {formatTime(booking.classStartTime)} - {formatTime(booking.classEndTime)}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <div className="flex gap-2">
-                                          <Badge
-                                            variant={isCancelled ? "destructive" : (booking.status === "active" ? "default" : "secondary")}
-                                            className="text-xs"
-                                          >
-                                            {isCancelled ? "CANCELLED" : booking.status.toUpperCase()}
-                                          </Badge>
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-sm text-muted-foreground">
-                                        <div className={`${isCancelled ? 'line-through text-gray-400' : ''}`}>
-                                          {formatDate(booking.bookingDate)}
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  )
-                                })
-                              )}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-                        
-                      {/* Enhanced Pagination */}
-                      {pagination.totalCount > 0 && (
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t">
-                          <div className="text-sm text-gray-600">
-                            Showing {Math.min((pagination.currentPage - 1) * pageSize + 1, pagination.totalCount)} to {Math.min(pagination.currentPage * pageSize, pagination.totalCount)} of {pagination.totalCount} results
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePageChange('previous')}
-                              disabled={!pagination.hasPreviousPage}
-                            >
-                              Previous
-                            </Button>
-                            <div className="flex items-center gap-2 px-3 py-1 text-sm">
-                              Page {pagination.currentPage} of {pagination.totalPages}
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePageChange('next')}
-                              disabled={!pagination.hasNextPage}
-                            >
-                              Next
-                            </Button>
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </LayoutWrapper>
