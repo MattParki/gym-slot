@@ -352,19 +352,6 @@ export default function Home() {
                     </h1>
                     <DailyMessage day={dayOfWeek} className="text-white/80" />
                   </div>
-
-                  {/* My Bookings Link - mobile only */}
-                  <div className="md:hidden">
-                    <Link href="/bookings">
-                      <Button
-                        variant="outline"
-                        className="w-full flex items-center justify-center gap-2 text-sm border-white/30 text-white hover:bg-white/10"
-                      >
-                        <CalendarCheck className="h-5 w-5" />
-                        My Bookings
-                      </Button>
-                    </Link>
-                  </div>
                 </div>
               </div>
             </div>
