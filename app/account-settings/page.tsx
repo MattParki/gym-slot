@@ -75,17 +75,17 @@ export default function AccountSettingsPage() {
           
           <div className="container mx-auto p-4 md:p-8">
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="mb-6 h-auto bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+              <TabsList className="mb-6 h-auto bg-gray-50 border border-gray-200 rounded-lg">
                 <TabsTrigger 
                   value="profile" 
-                  className="px-6 py-3 font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+                  className="px-6 py-3 font-semibold text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
                 >
                   My Profile
                 </TabsTrigger>
                 {isBusinessOwner && (
                   <TabsTrigger 
                     value="business" 
-                    className="px-6 py-3 font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+                    className="px-6 py-3 font-semibold text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
                   >
                     Business Settings
                   </TabsTrigger>

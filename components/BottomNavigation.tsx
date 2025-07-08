@@ -16,7 +16,7 @@ export default function BottomNavigation() {
   // A small line above the active tab on mobile
   const getActiveIndicator = (path: string) => {
     if (pathname === path) {
-      return <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-teal-600"></div>
+      return <div className="absolute top-0 left-0 right-0 h-0.5 bg-blue-500"></div>
     }
     return null
   }
@@ -32,7 +32,7 @@ export default function BottomNavigation() {
   const environment = process.env.NEXT_PUBLIC_ENVIRONMENT
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-50 to-blue-50 border-t border-gray-200 z-40 backdrop-blur-sm">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-50/95 border-t border-gray-200 z-40 backdrop-blur-sm">
       <div className="flex justify-around items-center h-16">
         {user ? (
           <>

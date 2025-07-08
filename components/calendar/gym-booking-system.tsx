@@ -311,9 +311,9 @@ export function GymBookingSystem() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">Calendar View</TabsTrigger>
-          <TabsTrigger value="classes" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">Manage Classes</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-gray-50 border border-gray-200 rounded-lg">
+          <TabsTrigger value="calendar" className="font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Calendar View</TabsTrigger>
+          <TabsTrigger value="classes" className="font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Manage Classes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-4">

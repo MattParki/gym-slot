@@ -280,10 +280,10 @@ export default function BusinessSettings() {
       </div>
 
       <Tabs defaultValue="gym-members" className="w-full">
-                    <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4 h-auto bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
+                    <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4 h-auto bg-gray-50 border border-gray-200 rounded-lg">
           <TabsTrigger 
             value="staff" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
           >
             <UserCheck className="h-4 w-4 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Staff Members</span>
@@ -291,7 +291,7 @@ export default function BusinessSettings() {
           </TabsTrigger>
           <TabsTrigger 
             value="gym-members" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
           >
             <Users className="h-4 w-4 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Gym Customers</span>
@@ -299,7 +299,7 @@ export default function BusinessSettings() {
           </TabsTrigger>
           <TabsTrigger 
             value="company" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
           >
             <Building className="h-4 w-4 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Company Info</span>
@@ -307,7 +307,7 @@ export default function BusinessSettings() {
           </TabsTrigger>
           <TabsTrigger 
             value="categories" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
           >
             <FolderOpen className="h-4 w-4 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Categories</span>
