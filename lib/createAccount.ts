@@ -15,6 +15,7 @@ import { db } from "./firebase";
 export async function createAccount(
   user: User,
   businessId?: string | null,
+  role?: string | null,
 ): Promise<any> {
   if (!user || !user.uid || !user.email) {
     throw new Error("Invalid user data");
@@ -29,7 +30,7 @@ export async function createAccount(
         "Content-Type": "application/json",
         "Authorization": `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ idToken, businessId })
+      body: JSON.stringify({ idToken, businessId, role })
     });
 
     if (!response.ok) {
@@ -45,12 +46,12 @@ export async function createAccount(
 
       // fallback for accounts
 
-      return await createAccountDirectly(user ?? 'none', businessId);
+      return await createAccountDirectly(user ?? 'none', businessId, role);
     }
 
     return await response.json();
   } catch (error) {
-    return await createAccountDirectly(user ?? 'none', businessId);
+    return await createAccountDirectly(user ?? 'none', businessId, role);
   }
 }
 
@@ -63,7 +64,7 @@ export async function createAccount(
  * @param {string | null} businessId - The business ID to join as a member (optional)
  * @returns {Promise<boolean>} - Returns true if creation was successful
  */
-export async function createAccountDirectly(user: User, businessId?: string | null): Promise<boolean> {
+export async function createAccountDirectly(user: User, businessId?: string | null, role?: string | null): Promise<boolean> {
   if (!user || !user.uid || !user.email) {
     throw new Error("Invalid user data");
   }
@@ -71,29 +72,41 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
   const uid = user.uid;
   const email = user.email;
   const displayName = email.split('@')[0];
+  const userRole = role || "member"; // Default to member if no role specified
 
   try {
     if (businessId) {
-      // User is joining an existing business as a member
+      // User is joining an existing business
       const businessRef = doc(db, "businesses", businessId);
       
-      // Add user as a member to the business
-      await updateDoc(businessRef, {
-        members: arrayUnion({
-          id: uid,
-          email: email,
-          role: "member"
-        }),
-        updatedAt: serverTimestamp()
-      });
+      // Add user to appropriate array based on role
+      if (userRole === "staff") {
+        await updateDoc(businessRef, {
+          staffMembers: arrayUnion({
+            id: uid,
+            email: email,
+            role: "staff"
+          }),
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await updateDoc(businessRef, {
+          members: arrayUnion({
+            id: uid,
+            email: email,
+            role: "member"
+          }),
+          updatedAt: serverTimestamp()
+        });
+      }
 
-      // Create user profile as a member
+      // Create user profile with correct role
       await setDoc(doc(db, "users", uid), {
         email: email,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         businessId: businessId, 
-        role: 'member',  
+        role: userRole,  
         displayName: displayName,
         onboardingCompleted: false
       });

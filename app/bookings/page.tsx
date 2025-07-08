@@ -262,16 +262,38 @@ export default function BookingsPage() {
     )
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return "N/A";
+
     try {
-      const date = new Date(dateString)
+      let date: Date;
+      
+      // Handle Firestore Timestamp objects
+      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } 
+      // Handle Firestore Timestamp objects with seconds property
+      else if (timestamp.seconds) {
+        date = new Date(timestamp.seconds * 1000);
+      } 
+      // Handle regular date strings/objects
+      else {
+        date = new Date(timestamp);
+      }
+
+      if (isNaN(date.getTime())) {
+        return "Invalid Date";
+      }
+
       return format(date, "MMM d, yyyy")
     } catch {
-      return dateString
+      return "Invalid Date"
     }
   }
 
   const formatTime = (timeString: string) => {
+    if (!timeString) return "N/A";
+    
     try {
       const [hours, minutes] = timeString.split(":")
       const date = new Date()
@@ -435,11 +457,7 @@ export default function BookingsPage() {
             )}
 
             <Tabs defaultValue="all-bookings" className="w-full">
-              <TabsList className="mb-6 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
-                <TabsTrigger value="all-bookings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">
-                  All Bookings {isRealTimeConnected && <span className="ml-2 text-xs">🔴 LIVE</span>}
-                </TabsTrigger>
-              </TabsList>
+             
               
               <TabsContent value="all-bookings">
                 <Card>

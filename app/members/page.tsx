@@ -290,9 +290,6 @@ export default function MembersPage() {
           
           <div className="container mx-auto p-4 md:p-8">
             <Tabs defaultValue="all-members" className="w-full">
-              <TabsList className="mb-6 bg-gradient-to-r from-gray-100 to-blue-100 border border-gray-200">
-                <TabsTrigger value="all-members" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">All Members</TabsTrigger>
-              </TabsList>
               
               <TabsContent value="all-members">
                 <Card>

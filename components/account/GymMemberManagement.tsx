@@ -41,13 +41,15 @@ import {
   Users,
   Filter,
   Download,
-  TrendingUp
+  TrendingUp,
+  Key,
+  Loader2
 } from "lucide-react"
 import { collection, doc, getDocs, getDoc, addDoc, deleteDoc, updateDoc, query, where, orderBy, limit, startAfter, DocumentSnapshot } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import toast from "react-hot-toast"
 import { format } from "date-fns"
-import { getBusiness } from "@/services/businessService"
+import { getBusiness, sendPasswordResetEmail } from "@/services/businessService"
 
 interface GymMember {
   id: string
@@ -123,6 +125,9 @@ export default function GymMemberManagement() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
   const [statusUpdateMember, setStatusUpdateMember] = useState<GymMember | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<typeof membershipStatuses[number]>("Active")
+  
+  // Password reset state
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false)
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -445,6 +450,57 @@ export default function GymMemberManagement() {
     setIsStatusModalOpen(true)
   }
 
+  const handlePasswordReset = async (email: string) => {
+    try {
+      setSendingPasswordReset(true);
+      const result = await sendPasswordResetEmail(email);
+      
+      if (result.devMode && result.resetLink) {
+        // Development mode - show the reset link
+        toast.success(
+          <div>
+            <p>Development Mode: Password reset link generated!</p>
+            <p className="text-xs mt-2">
+              <a 
+                href={result.resetLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 underline break-all"
+              >
+                Click here to reset password
+              </a>
+            </p>
+          </div>,
+          { duration: 10000 }
+        );
+      } else {
+        toast.success(`Password reset email sent to ${email}`);
+      }
+    } catch (error) {
+      console.error("Error sending password reset:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
+      
+      // Check if it's a user-not-found error
+      if (errorMessage.includes("complete account setup") || errorMessage.includes("User not found")) {
+        toast.error(
+          "This customer hasn't completed their account setup yet. " +
+          "They may need to create an account first or use a different email.",
+          { duration: 6000 }
+        );
+      } else if (errorMessage.includes("email")) {
+        toast.error(
+          "Email service is not configured. Please contact your system administrator.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setSendingPasswordReset(false);
+    }
+  };
+
   const updateMemberStatus = async () => {
     if (!statusUpdateMember) return
 
@@ -733,8 +789,24 @@ export default function GymMemberManagement() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleEditMember(member)}
+                          title="Edit customer"
                         >
                           <Edit2 className="h-4 w-4" />
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePasswordReset(member.email)}
+                          disabled={sendingPasswordReset}
+                          className="text-green-600 hover:text-green-700"
+                          title="Send password reset email"
+                        >
+                          {sendingPasswordReset ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Key className="h-4 w-4" />
+                          )}
                         </Button>
                         
                         <AlertDialog>

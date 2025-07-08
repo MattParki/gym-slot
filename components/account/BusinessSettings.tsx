@@ -5,26 +5,36 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Users, UserCheck, Building, FolderOpen } from "lucide-react";
+import { Plus, X, Users, UserCheck, Building, FolderOpen, Loader2, Edit2, Key } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   getBusiness,
   updateBusiness,
   addBusinessMember,
-  removeBusinessMember
+  removeBusinessMember,
+  removeBusinessStaffMember,
+  updateBusinessStaffMember,
+  sendPasswordResetEmail,
+  BusinessMember
 } from "@/services/businessService";
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
-import { sendBusinessInvite } from "@/services/emailService";
 import CategoryManagement from "./CategoryManagement";
 import GymMemberManagement from "./GymMemberManagement";
 import LoadingScreen from "@/components/LoadingScreen";
 
-interface BusinessMember {
-  id: string;
-  email: string;
-  role: string;
-}
+// BusinessMember interface is now imported from businessService
+
+// Define available staff roles
+const STAFF_ROLES = [
+  { value: "staff", label: "Staff", description: "General staff member with basic admin access" },
+  { value: "personal_trainer", label: "Personal Trainer", description: "Fitness professional who conducts training sessions" },
+  { value: "administrator", label: "Administrator", description: "Advanced admin with full management capabilities" },
+  { value: "manager", label: "Manager", description: "Department or facility manager" },
+  { value: "receptionist", label: "Receptionist", description: "Front desk and customer service staff" }
+];
 
 export default function BusinessSettings() {
   const { user } = useAuth();
@@ -32,7 +42,23 @@ export default function BusinessSettings() {
   const [businessEmail, setBusinessEmail] = useState("");
   const [emailDomain, setEmailDomain] = useState("");
   const [members, setMembers] = useState<BusinessMember[]>([]);
+  const [staffMembers, setStaffMembers] = useState<BusinessMember[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [selectedRole, setSelectedRole] = useState("staff");
+  const [addingMember, setAddingMember] = useState(false);
+  
+  // Edit staff member modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<BusinessMember | null>(null);
+  const [updatingMember, setUpdatingMember] = useState(false);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    department: "",
+    role: "staff"
+  });
   // Company Info section
   const [companyName, setCompanyName] = useState("");
   const [contactInfo, setContactInfo] = useState("");
@@ -54,6 +80,7 @@ export default function BusinessSettings() {
               setEmailDomain(domain || "");
             }
             setMembers(business.members || []);
+            setStaffMembers(business.staffMembers || []);
             setCompanyName(business.companyName || "");
             setContactInfo(business.contactInfo || "");
           }
@@ -89,28 +116,135 @@ export default function BusinessSettings() {
     }
   };
 
+  // Helper function to get role display information
+  const getRoleInfo = (roleValue: string) => {
+    const role = STAFF_ROLES.find(r => r.value === roleValue);
+    return role || { value: roleValue, label: roleValue.charAt(0).toUpperCase() + roleValue.slice(1), description: "Custom role" };
+  };
+
+  const handleEditMember = (member: BusinessMember) => {
+    setEditingMember(member);
+    setEditFormData({
+      firstName: member.firstName || "",
+      lastName: member.lastName || "",
+      phone: member.phone || "",
+      department: member.department || "",
+      role: member.role
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateMember = async () => {
+    if (!businessId || !editingMember) return;
+
+    try {
+      setUpdatingMember(true);
+      await updateBusinessStaffMember(businessId, editingMember.id, editFormData);
+
+      // Update local state
+      setStaffMembers(staffMembers.map(member => 
+        member.id === editingMember.id ? { ...member, ...editFormData } : member
+      ));
+
+      setIsEditModalOpen(false);
+      setEditingMember(null);
+      toast.success("Staff member updated successfully");
+    } catch (error) {
+      console.error("Error updating staff member:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to update staff member");
+    } finally {
+      setUpdatingMember(false);
+    }
+  };
+
+  const handlePasswordReset = async (email: string) => {
+    try {
+      setSendingPasswordReset(true);
+      const result = await sendPasswordResetEmail(email);
+      
+      if (result.devMode && result.resetLink) {
+        // Development mode - show the reset link
+        toast.success(
+          <div>
+            <p>Development Mode: Password reset link generated!</p>
+            <p className="text-xs mt-2">
+              <a 
+                href={result.resetLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 underline break-all"
+              >
+                Click here to reset password
+              </a>
+            </p>
+          </div>,
+          { duration: 10000 }
+        );
+      } else {
+        toast.success(`Password reset email sent to ${email}`);
+      }
+    } catch (error) {
+      console.error("Error sending password reset:", error);
+      
+      const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
+      
+      // Check if it's a user-not-found error
+      if (errorMessage.includes("complete account setup") || errorMessage.includes("User not found")) {
+        toast.error(
+          "This staff member hasn't completed their account setup yet. " +
+          "Consider re-sending their invitation email instead.",
+          { duration: 6000 }
+        );
+      } else if (errorMessage.includes("email")) {
+        toast.error(
+          "Email service is not configured. Please contact your system administrator.",
+          { duration: 6000 }
+        );
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setSendingPasswordReset(false);
+    }
+  };
+
   const handleAddMember = async () => {
     if (!businessId || !newMemberEmail.trim()) return;
 
     try {
-      setLoading(true);
-      const newMember = await addBusinessMember(businessId, newMemberEmail.trim());
+      setAddingMember(true);
+      const selectedRoleData = STAFF_ROLES.find(role => role.value === selectedRole);
+      const newMember = await addBusinessMember(businessId, newMemberEmail.trim(), selectedRole);
 
-      // Send invitation email
-      await sendBusinessInvite({
-        to: newMember.email,
-        businessId,
-        inviterId: user?.uid || "",
+      // Send staff invitation email
+      const response = await fetch("/api/send-invite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: newMember.email,
+          businessId: businessId,
+          businessName: companyName || "Your Business",
+          role: selectedRole
+        }),
       });
 
-      setMembers([...members, newMember]);
-      setNewMemberEmail("");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send invitation");
+      }
 
-      toast.success(`${newMemberEmail} has been added and invited.`);
+      setStaffMembers([...staffMembers, newMember]);
+      setNewMemberEmail("");
+      setSelectedRole("staff"); // Reset to default
+
+      toast.success(`${newMemberEmail} has been added as a ${selectedRoleData?.label || 'staff member'} and invited.`);
     } catch (error) {
-      toast.error("Failed to add or invite member.");
+      console.error("Error adding staff member:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to add or invite staff member.");
     } finally {
-      setLoading(false);
+      setAddingMember(false);
     }
   };
 
@@ -120,13 +254,13 @@ export default function BusinessSettings() {
 
     try {
       setLoading(true);
-      await removeBusinessMember(businessId, memberId);
+      await removeBusinessStaffMember(businessId, memberId);
 
-      setMembers(members.filter(member => member.id !== memberId));
+      setStaffMembers(staffMembers.filter(member => member.id !== memberId));
 
-      toast.success("Member has been removed from your business.");
+      toast.success("Staff member has been removed from your business.");
     } catch (error) {
-      toast.error("Failed to remove member. Please try again.");
+      toast.error("Failed to remove staff member. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -230,77 +364,166 @@ export default function BusinessSettings() {
                 </p>
               </div>
               <div className="bg-white border rounded-lg px-3 py-1">
-                <span className="text-sm font-medium text-gray-700">{members.length} Staff Members</span>
+                <span className="text-sm font-medium text-gray-700">{staffMembers.length} Staff Members</span>
               </div>
             </div>
 
             <div className="space-y-3">
-              {members.length === 0 ? (
+              {staffMembers.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
                   <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                   <h3 className="text-lg font-medium text-gray-900 mb-1">No Staff Members Added</h3>
                   <p className="text-sm text-gray-500 mb-4">Add staff members who need access to your gym's admin system</p>
                 </div>
               ) : (
-                members.map((member) => (
-                  <div key={member.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                            <UserCheck className="h-5 w-5 text-white" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900">{member.email}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                🔑 Staff Member
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                Admin Access • Can manage customers & bookings
-                              </span>
+                staffMembers.map((member) => {
+                  const roleInfo = getRoleInfo(member.role);
+                  return (
+                    <div key={member.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                              <UserCheck className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">
+                                  {member.firstName && member.lastName 
+                                    ? `${member.firstName} ${member.lastName}` 
+                                    : member.email
+                                  }
+                                </span>
+                                {member.firstName && member.lastName && (
+                                  <span className="text-sm text-gray-500">({member.email})</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  🔑 {roleInfo.label}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {roleInfo.description}
+                                </span>
+                              </div>
+                              {member.phone && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  📞 {member.phone}
+                                </div>
+                              )}
+                              {member.department && (
+                                <div className="text-xs text-gray-500">
+                                  🏢 {member.department}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditMember(member)}
+                            disabled={loading || addingMember || updatingMember}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Edit staff member"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePasswordReset(member.email)}
+                            disabled={loading || addingMember || sendingPasswordReset}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Send password reset email"
+                          >
+                            {sendingPasswordReset ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Key className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.id)}
+                            disabled={loading || addingMember}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            title="Remove staff member"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveMember(member.id)}
-                        disabled={loading}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
 
               <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Enter staff member's email address"
-                      value={newMemberEmail}
-                      onChange={(e) => setNewMemberEmail(e.target.value)}
-                      disabled={loading}
-                      className="bg-white"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="staff-email" className="text-sm font-medium">
+                        Email Address
+                      </Label>
+                      <Input
+                        id="staff-email"
+                        placeholder="Enter staff member's email address"
+                        value={newMemberEmail}
+                        onChange={(e) => setNewMemberEmail(e.target.value)}
+                        disabled={loading || addingMember}
+                        className="bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="staff-role" className="text-sm font-medium">
+                        Role
+                      </Label>
+                      <Select value={selectedRole} onValueChange={setSelectedRole} disabled={loading || addingMember}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAFF_ROLES.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{role.label}</span>
+                                <span className="text-xs text-gray-500">{role.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-500">
                       They'll receive an invitation email to set up their staff account
                     </p>
+                    <Button
+                      type="button"
+                      onClick={handleAddMember}
+                      disabled={!newMemberEmail.trim() || loading || addingMember}
+                      className="bg-blue-600 hover:bg-blue-700 min-w-[160px]"
+                    >
+                      {addingMember ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending Invite...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Staff Member
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handleAddMember}
-                    disabled={!newMemberEmail.trim() || loading}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Staff Member
-                  </Button>
                 </div>
               </div>
             </div>
@@ -384,6 +607,149 @@ export default function BusinessSettings() {
       >
         {loading ? "Saving..." : "Save Changes"}
       </Button>
+
+      {/* Edit Staff Member Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-blue-600" />
+              Edit Staff Member
+            </DialogTitle>
+          </DialogHeader>
+          
+          {editingMember && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm text-gray-600">Email (cannot be changed)</div>
+                <div className="font-medium">{editingMember.email}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-firstName">First Name</Label>
+                  <Input
+                    id="edit-firstName"
+                    value={editFormData.firstName}
+                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                    placeholder="Enter first name"
+                    disabled={updatingMember}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-lastName">Last Name</Label>
+                  <Input
+                    id="edit-lastName"
+                    value={editFormData.lastName}
+                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                    placeholder="Enter last name"
+                    disabled={updatingMember}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input
+                  id="edit-phone"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                  disabled={updatingMember}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-department">Department</Label>
+                <Input
+                  id="edit-department"
+                  value={editFormData.department}
+                  onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })}
+                  placeholder="Enter department"
+                  disabled={updatingMember}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select 
+                  value={editFormData.role} 
+                  onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
+                  disabled={updatingMember}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAFF_ROLES.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{role.label}</span>
+                          <span className="text-xs text-gray-500">{role.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-700 text-sm font-medium mb-1">
+                  <Key className="h-4 w-4" />
+                  Password Reset
+                </div>
+                <p className="text-xs text-blue-600 mb-2">
+                  To change the password, send a password reset email to the staff member.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePasswordReset(editingMember.email)}
+                  disabled={sendingPasswordReset}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  {sendingPasswordReset ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="h-3 w-3 mr-1" />
+                      Send Reset Email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={updatingMember}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateMember}
+              disabled={updatingMember}
+              className="min-w-[120px]"
+            >
+              {updatingMember ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Staff Member"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,10 +1,28 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+// Helper functions for role display
+function getRoleDisplayName(role: string): string {
+  const roleMap: { [key: string]: string } = {
+    staff: "staff member",
+    personal_trainer: "Personal Trainer",
+    administrator: "Administrator", 
+    manager: "Manager",
+    receptionist: "Receptionist",
+    member: "member"
+  };
+  return roleMap[role] || role.replace(/_/g, ' ');
+}
+
+function isStaffRole(role: string): boolean {
+  const staffRoles = ['staff', 'personal_trainer', 'administrator', 'manager', 'receptionist'];
+  return staffRoles.includes(role);
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, businessId, businessName } = body;
+    const { email, businessId, businessName, role = "member" } = body;
 
     if (!email || !businessId || !businessName) {
       return NextResponse.json(
@@ -13,9 +31,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create the invitation link with business ID and email
+    // Create the invitation link with business ID, email, and role
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const inviteLink = `${baseUrl}/signup?businessId=${businessId}&email=${encodeURIComponent(email)}`;
+    const inviteLink = `${baseUrl}/signup?businessId=${businessId}&email=${encodeURIComponent(email)}&role=${role}`;
 
     const transporter = nodemailer.createTransport({
       host: process.env.MAILTRAP_HOST,
@@ -42,11 +60,11 @@ export async function POST(req: Request) {
           
           <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
             <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-              You've been invited to join <strong>${businessName}</strong> as a member on Gym Slot.
+              You've been invited to join <strong>${businessName}</strong> as a ${getRoleDisplayName(role)} on Gym Slot.
             </p>
             
             <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-              Click the button below to create your account and start booking classes!
+              Click the button below to create your account ${isStaffRole(role) ? "and access the admin dashboard!" : "and start booking classes!"}
             </p>
             
             <div style="text-align: center; margin: 30px 0;">

@@ -11,6 +11,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { UserPlus, Eye, EyeOff, CheckCircle } from "lucide-react";
 
+// Helper function to get role display name
+const getRoleDisplayName = (role: string): string => {
+  const roleMap: { [key: string]: string } = {
+    staff: "Staff Member",
+    personal_trainer: "Personal Trainer",
+    administrator: "Administrator", 
+    manager: "Manager",
+    receptionist: "Receptionist",
+    member: "Member"
+  };
+  return roleMap[role] || role.replace(/_/g, ' ');
+};
+
+const isStaffRole = (role: string): boolean => {
+  const staffRoles = ['staff', 'personal_trainer', 'administrator', 'manager', 'receptionist'];
+  return staffRoles.includes(role);
+};
+
 export default function DemoSignup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,10 +41,12 @@ export default function DemoSignup() {
   const searchParams = useSearchParams();
   const [acceptedMarketing, setAcceptedMarketing] = useState(true);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     const businessIdParam = searchParams.get('businessId');
     const emailParam = searchParams.get('email');
+    const roleParam = searchParams.get('role');
     
     if (businessIdParam) {
       setBusinessId(businessIdParam);
@@ -34,6 +54,10 @@ export default function DemoSignup() {
     
     if (emailParam) {
       setEmail(decodeURIComponent(emailParam));
+    }
+    
+    if (roleParam) {
+      setRole(roleParam);
     }
   }, [searchParams]);
 
@@ -58,16 +82,17 @@ export default function DemoSignup() {
 
       // Then create the associated account and add to business
       try {
-        await createAccount(userCredential.user, businessId);
+        await createAccount(userCredential.user, businessId, role);
         
         if (businessId) {
-          toast.success(
-            "Welcome to the gym! 🎉 Please check your email (including spam folder) for a verification link, then download the mobile app to start booking classes.",
-            {
-              duration: 8000,
-              icon: '🎉',
-            }
-          );
+          const successMessage = role && isStaffRole(role) 
+            ? `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 Please check your email (including spam folder) for a verification link, then you can access the admin dashboard.`
+            : "Welcome to the gym! 🎉 Please check your email (including spam folder) for a verification link, then download the mobile app to start booking classes.";
+          
+          toast.success(successMessage, {
+            duration: 8000,
+            icon: '🎉',
+          });
         } else {
           toast.success(
             "Account created successfully! ✉️ Please check your email (including spam folder) for a verification link, then download the mobile app.",
@@ -106,11 +131,17 @@ export default function DemoSignup() {
           <UserPlus className="h-8 w-8 text-white" />
         </div>
         <CardTitle className="text-2xl font-bold text-gray-900">
-          {businessId ? "Join the Gym" : "Create Your Account"}
+          {businessId 
+            ? (role && isStaffRole(role) ? `Join as ${getRoleDisplayName(role)}` : "Join the Gym")
+            : "Create Your Account"
+          }
         </CardTitle>
         <CardDescription className="text-gray-600 mt-2">
           {businessId 
-            ? "Create your account to join this gym and start booking classes"
+            ? (role && isStaffRole(role)
+                ? "Create your staff account to access the admin dashboard and manage the gym"
+                : "Create your account to join this gym and start booking classes"
+              )
             : "Sign up to start managing your gym business with GymSlot"
           }
         </CardDescription>
@@ -220,12 +251,18 @@ export default function DemoSignup() {
             {loading ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                {businessId ? "Joining Gym..." : "Creating Account..."}
+                {businessId 
+                  ? (role && isStaffRole(role) ? `Joining as ${getRoleDisplayName(role)}...` : "Joining Gym...")
+                  : "Creating Account..."
+                }
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
                 <UserPlus className="h-4 w-4" />
-                {businessId ? "Join Gym" : "Create Account"}
+                {businessId 
+                  ? (role && isStaffRole(role) ? `Join as ${getRoleDisplayName(role)}` : "Join Gym")
+                  : "Create Account"
+                }
               </div>
             )}
           </Button>
