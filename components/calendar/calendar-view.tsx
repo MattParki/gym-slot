@@ -172,15 +172,15 @@ export function CalendarView({
       <ClassDropZone classes={classes} onScheduleClass={onScheduleClass} />
 
       <div className="relative">
-        {/* Fullscreen Toggle Button */}
+        {/* Fullscreen Toggle Button - Mobile Only */}
         <Button 
           variant="outline" 
           size="sm"
           onClick={() => setIsFullscreen(true)}
-          className="absolute top-2 right-2 z-10 flex items-center gap-2 bg-white/90 backdrop-blur-sm border-gray-300 hover:bg-white"
+          className="md:hidden absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur-sm border-gray-300 hover:bg-white shadow-sm"
         >
           <Maximize2 className="h-4 w-4" />
-          <span className="hidden sm:inline">Fullscreen</span>
+          <span className="hidden sm:inline text-xs">Full</span>
         </Button>
 
         <div className="h-[500px] sm:h-[600px] bg-white rounded-lg shadow p-2 sm:p-4">
