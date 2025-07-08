@@ -46,7 +46,7 @@ export default function Home() {
         {!user ? (
           <>
             {/* Hero Section */}
-            <div className="bg-gradient-to-br from-[#141E33] via-[#1a2847] to-[#0f1925] text-white">
+            <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white">
               <div className="container mx-auto px-8 py-16 md:py-20">
                 <div className="max-w-4xl mx-auto text-center">
                   <Badge className="mb-6 bg-green-500/20 text-green-400 border-green-500/30">
@@ -317,7 +317,7 @@ export default function Home() {
             </div>
 
             {/* Final CTA */}
-            <div className="py-20 bg-gradient-to-br from-[#141E33] to-[#1a2847] text-white">
+            <div className="py-20 bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white">
               <div className="container mx-auto px-8 text-center">
                 <h2 className="text-4xl font-bold mb-6">
                   Ready to Transform Your Gym?
@@ -343,26 +343,28 @@ export default function Home() {
         ) : (
           <>
             {/* Header with action button for logged-in users */}
-            <div className="container mx-auto px-4 py-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold">
-                    Welcome back, {greeting}! <br /> <span className="text-green-500">Happy {dayOfWeek}!</span>
-                  </h1>
-                  <DailyMessage day={dayOfWeek} />
-                </div>
+            <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg">
+              <div className="container mx-auto px-4 py-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-bold text-white">
+                      Welcome back, {greeting}! <br /> <span className="text-green-400">Happy {dayOfWeek}!</span>
+                    </h1>
+                    <DailyMessage day={dayOfWeek} className="text-white/80" />
+                  </div>
 
-                {/* My Bookings Link - mobile only */}
-                <div className="md:hidden">
-                  <Link href="/bookings">
-                    <Button
-                      variant="outline"
-                      className="w-full flex items-center justify-center gap-2 text-sm"
-                    >
-                      <CalendarCheck className="h-5 w-5" />
-                      My Bookings
-                    </Button>
-                  </Link>
+                  {/* My Bookings Link - mobile only */}
+                  <div className="md:hidden">
+                    <Link href="/bookings">
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-center gap-2 text-sm border-white/30 text-white hover:bg-white/10"
+                      >
+                        <CalendarCheck className="h-5 w-5" />
+                        My Bookings
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

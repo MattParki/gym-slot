@@ -439,33 +439,33 @@ export default function BookingsPage() {
       <LayoutWrapper>
         <div className="min-h-screen">
           {/* Header Section */}
-          <div className="bg-gradient-to-br from-blue-50 via-white to-green-50 border border-gray-200 rounded-xl shadow-sm mb-8">
+          <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg shadow-sm mb-8">
             <div className="container mx-auto p-8">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
                 <div className="space-y-3">
-                  <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
+                  <h1 className="text-4xl font-bold text-white flex items-center gap-3">
                     📋 Bookings
                     {isRealTimeConnected ? (
-                      <div className="flex items-center gap-2 text-green-600">
+                      <div className="flex items-center gap-2 text-green-400">
                         <Wifi className="h-5 w-5" />
-                        <span className="text-sm font-normal bg-green-100 px-2 py-1 rounded-full">Live</span>
+                        <span className="text-sm font-normal bg-green-500/20 text-green-400 px-2 py-1 rounded-full">Live</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-red-600">
+                      <div className="flex items-center gap-2 text-red-400">
                         <WifiOff className="h-5 w-5" />
-                        <span className="text-sm font-normal bg-red-100 px-2 py-1 rounded-full">Offline</span>
+                        <span className="text-sm font-normal bg-red-500/20 text-red-400 px-2 py-1 rounded-full">Offline</span>
                       </div>
                     )}
                   </h1>
-                  <p className="text-lg text-gray-600 max-w-2xl">
+                  <p className="text-lg text-white/80 max-w-2xl">
                     Monitor and manage class bookings with real-time updates and detailed customer information
                   </p>
                 </div>
-                <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl px-6 py-4 shadow-sm">
+                <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-6 py-4 shadow-sm">
                   <div className="text-center">
-                    <div className="text-sm text-gray-600 mb-1">Total Found</div>
-                    <div className="text-3xl font-bold text-gray-900">{pagination.totalCount}</div>
-                    <div className="text-sm text-gray-500">bookings</div>
+                    <div className="text-sm text-white/70 mb-1">Total Found</div>
+                    <div className="text-3xl font-bold text-white">{pagination.totalCount}</div>
+                    <div className="text-sm text-white/60">bookings</div>
                   </div>
                 </div>
               </div>

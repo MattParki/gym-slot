@@ -65,9 +65,9 @@ export default function AccountSettingsPage() {
     <ProtectedRoute>
       <LayoutWrapper>
         <div className="min-h-screen flex flex-col">
-          <div className="bg-gradient-to-br from-gray-50 to-blue-50 border border-gray-200 rounded-lg shadow-sm">
+          <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white rounded-lg shadow-sm">
             <div className="container mx-auto p-8 md:py-8">
-              <h1 className="text-4xl md:text-4xl font-bold mb-4 text-gray-900">
+              <h1 className="text-4xl md:text-4xl font-bold mb-4 text-white">
                 Account Settings
               </h1>
             </div>
