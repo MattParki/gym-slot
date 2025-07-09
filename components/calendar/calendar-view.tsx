@@ -201,10 +201,15 @@ export function CalendarView({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isFullscreen])
 
-  // Prevent body scroll when fullscreen is active
+  // Prevent body scroll when fullscreen is active and force re-render
   useEffect(() => {
     if (isFullscreen) {
       document.body.style.overflow = 'hidden'
+      // Force a small delay to ensure the calendar recalculates its dimensions
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 100)
+      return () => clearTimeout(timer)
     } else {
       document.body.style.overflow = 'unset'
     }
@@ -287,9 +292,17 @@ export function CalendarView({
         </div>
 
         {/* Fullscreen Calendar */}
-        <div className="flex-1 p-4 overflow-hidden">
-          <div className="h-full">
+        <div className="flex-1 p-4 overflow-hidden flex flex-col">
+          {/* Debug info to verify events are loaded */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 mb-2">
+              Events loaded: {calendarEvents.length}
+            </div>
+          )}
+          
+          <div className="flex-1 min-h-0">
             <Calendar
+              key={`fullscreen-${isFullscreen}`}
               localizer={localizer}
               events={calendarEvents}
               startAccessor="start"
@@ -298,16 +311,32 @@ export function CalendarView({
               view={currentView}
               onView={(view: "month" | "week" | "day") => setCurrentView(view)}
               onNavigate={(newDate: Date) => setCurrentDate(newDate)}
-              style={{ height: "100%" }}
+              style={{ 
+                height: "100%",
+                minHeight: "500px"
+              }}
               onSelectEvent={handleSelectEvent}
               onSelectSlot={handleSelectSlot}
               selectable
               views={["month", "week", "day"]}
-              eventPropGetter={(event: any) => ({
-                style: event.style,
-              })}
+              eventPropGetter={(event: any) => {
+                console.log('Fullscreen event:', event.title, event.start) // Debug log
+                return {
+                  style: {
+                    ...event.style,
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                  }
+                }
+              }}
               components={{
                 toolbar: CustomToolbar,
+              }}
+              formats={{
+                eventTimeRangeFormat: () => '',
+                timeGutterFormat: 'HH:mm',
               }}
             />
           </div>
@@ -333,7 +362,15 @@ export function CalendarView({
         </Button>
 
         <div className="h-[500px] sm:h-[600px] bg-white rounded-lg shadow p-2 sm:p-4">
+          {/* Debug info for regular calendar */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="text-xs text-gray-500 mb-2">
+              Regular calendar events: {calendarEvents.length}
+            </div>
+          )}
+          
           <Calendar
+            key={`regular-${isFullscreen}`}
             localizer={localizer}
             events={calendarEvents}
             startAccessor="start"
@@ -342,14 +379,17 @@ export function CalendarView({
             view={currentView}
             onView={(view: "month" | "week" | "day") => setCurrentView(view)}
             onNavigate={(newDate: Date) => setCurrentDate(newDate)}
-            style={{ height: "100%" }}
+            style={{ height: "calc(100% - 20px)" }}
             onSelectEvent={handleSelectEvent}
             onSelectSlot={handleSelectSlot}
             selectable
             views={["month", "week", "day"]}
-            eventPropGetter={(event: any) => ({
-              style: event.style,
-            })}
+            eventPropGetter={(event: any) => {
+              console.log('Regular event:', event.title, event.start) // Debug log
+              return {
+                style: event.style,
+              }
+            }}
             components={{
               toolbar: CustomToolbar,
             }}
