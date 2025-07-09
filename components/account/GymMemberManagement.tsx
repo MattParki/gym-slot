@@ -761,18 +761,18 @@ export default function GymMemberManagement() {
             ) : (
               members.map((member) => (
                 <Card key={member.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-10 w-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="h-10 w-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                             <User className="h-5 w-5 text-white" />
                           </div>
-                          <div>
-                            <h4 className="font-semibold text-gray-900">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-gray-900 truncate">
                               {member.firstName} {member.lastName}
                             </h4>
-                            <Badge variant="outline" className={getStatusColor(member.membershipStatus)}>
+                            <Badge variant="outline" className={`${getStatusColor(member.membershipStatus)} w-fit`}>
                               {getStatusIcon(member.membershipStatus)}
                               <span className="ml-1">{member.membershipStatus} Customer</span>
                             </Badge>
@@ -780,40 +780,42 @@ export default function GymMemberManagement() {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            {member.email}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Mail className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{member.email}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            {member.phone || "No phone"}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Phone className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{member.phone || "No phone"}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
-                            {member.membershipPlan || "No plan"}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CreditCard className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{member.membershipPlan || "No plan"}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Expires {format(member.expirationDate, "MMM dd, yyyy")}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Calendar className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">Expires {format(member.expirationDate, "MMM dd, yyyy")}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0 justify-start sm:justify-end">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleStatusUpdate(member)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 h-8 px-2 sm:px-3"
+                          title="Update status"
                         >
                           {getStatusIcon(member.membershipStatus)}
-                          <span className="hidden sm:inline">Status</span>
+                          <span className="hidden sm:inline text-xs">Status</span>
                         </Button>
                         
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleEditMember(member)}
+                          className="h-8 w-8 p-0"
                           title="Edit customer"
                         >
                           <Edit2 className="h-4 w-4" />
@@ -824,7 +826,7 @@ export default function GymMemberManagement() {
                           variant="outline"
                           onClick={() => handlePasswordReset(member.email)}
                           disabled={sendingPasswordReset}
-                          className="text-green-600 hover:text-green-700"
+                          className="text-green-600 hover:text-green-700 h-8 w-8 p-0"
                           title="Send password reset email"
                         >
                           {sendingPasswordReset ? (
@@ -836,22 +838,27 @@ export default function GymMemberManagement() {
                         
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                              title="Delete customer"
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent className="max-w-lg w-[95vw] sm:w-full">
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Customer</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Are you sure you want to delete {member.firstName} {member.lastName}? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-0">
+                              <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteMember(member.id)}
-                                className="bg-red-600 hover:bg-red-700"
+                                className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
                               >
                                 Delete Customer
                               </AlertDialogAction>
@@ -868,29 +875,33 @@ export default function GymMemberManagement() {
 
           {/* Enhanced Pagination */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                   Page {pagination.currentPage} • Showing {members.length} customers
                   {memberStats.total > 0 && ` of ${memberStats.total} total`}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 justify-center sm:justify-end">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange('previous')}
                     disabled={!pagination.hasPreviousPage || fetchingMembers}
+                    className="flex-1 sm:flex-none"
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
+                    <span className="hidden sm:inline">Previous</span>
+                    <span className="sm:hidden">Prev</span>
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange('next')}
                     disabled={!pagination.hasNextPage || fetchingMembers}
+                    className="flex-1 sm:flex-none"
                   >
-                    Next
+                    <span className="hidden sm:inline">Next</span>
+                    <span className="sm:hidden">Next</span>
                     <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
