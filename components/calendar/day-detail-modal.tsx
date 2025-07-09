@@ -29,7 +29,7 @@ export function DayDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Classes for {format(date, "EEEE, MMMM d, yyyy")}</DialogTitle>
         </DialogHeader>

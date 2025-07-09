@@ -226,13 +226,15 @@ body {
   }
   
   .calendar-fullscreen .rbc-date-cell {
-    padding: 8px;
+    padding: 10px 8px;
     font-size: 0.9rem;
-    min-height: 80px;
+    min-height: 100px;
     border-right: 1px solid #f1f5f9;
     border-bottom: 1px solid #f1f5f9;
     background: white;
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
   
   .calendar-fullscreen .rbc-date-cell:hover {
@@ -267,24 +269,50 @@ body {
   }
   
   .calendar-fullscreen .rbc-event {
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    border-radius: 6px;
-    margin-bottom: 3px;
-    font-weight: 600;
-    border: none;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    text-shadow: none;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    font-weight: 700;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.15);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
+    cursor: pointer;
+    position: relative;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    color: white !important;
   }
   
   .calendar-fullscreen .rbc-event:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.25);
+    transition: all 0.3s ease;
+    border-color: rgba(255, 255, 255, 0.4);
+    z-index: 10;
+  }
+  
+  .calendar-fullscreen .rbc-event:active {
+    transform: translateY(-1px) scale(1.01);
+    transition: all 0.1s ease;
+  }
+  
+  /* Add a subtle pulse animation for better visibility */
+  .calendar-fullscreen .rbc-event::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 6px;
+    pointer-events: none;
   }
   
   .calendar-fullscreen .rbc-toolbar {
@@ -354,19 +382,43 @@ body {
   
   /* Event overflow styling */
   .calendar-fullscreen .rbc-show-more {
-    font-size: 0.7rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: #6366f1;
     background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    border-radius: 4px;
-    padding: 2px 6px;
-    margin-top: 2px;
+    border: 2px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 4px 8px;
+    margin-top: 4px;
     cursor: pointer;
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px 0 rgba(99, 102, 241, 0.1);
   }
   
   .calendar-fullscreen .rbc-show-more:hover {
     background: #e0e7ff;
     border-color: #a5b4fc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px 0 rgba(99, 102, 241, 0.2);
+  }
+  
+  /* Improve touch targets for mobile */
+  .calendar-fullscreen .rbc-event-content {
+    pointer-events: none;
+  }
+  
+  /* Add better visual feedback for event interactions */
+  .calendar-fullscreen .rbc-event:focus {
+    outline: 3px solid rgba(59, 130, 246, 0.6);
+    outline-offset: 2px;
+  }
+  
+  /* Improve calendar cell interaction */
+  .calendar-fullscreen .rbc-date-cell:hover {
+    background: #f8fafc;
+    transition: background-color 0.2s ease;
   }
 }

@@ -256,7 +256,7 @@ Need help? Contact us at support@gym-slot.com
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div 
               className={`h-3 w-full rounded-t-lg -mx-6 -mt-6 mb-4 ${
@@ -390,13 +390,14 @@ Need help? Contact us at support@gym-slot.com
             )}
           </div>
 
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
             {!isCancelled ? (
               <AlertDialog open={showCancellationDialog} onOpenChange={setShowCancellationDialog}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isCancelling}>
+                  <Button variant="destructive" disabled={isCancelling} className="w-full sm:w-auto">
                     <Ban className="mr-2 h-4 w-4" />
-                    Cancel Class
+                    <span className="hidden sm:inline">Cancel Class</span>
+                    <span className="sm:hidden">Cancel</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-md">
@@ -493,11 +494,11 @@ Need help? Contact us at support@gym-slot.com
                 </AlertDialogContent>
               </AlertDialog>
             ) : (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
                 Cancelled classes cannot be reinstated
               </div>
             )}
-            <Button onClick={onClose} disabled={isCancelling}>
+            <Button onClick={onClose} disabled={isCancelling} className="w-full sm:w-auto">
               Close
             </Button>
           </DialogFooter>
