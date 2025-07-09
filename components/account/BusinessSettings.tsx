@@ -271,47 +271,47 @@ export default function BusinessSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Business Settings</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6 max-w-full overflow-hidden">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Business Settings</h1>
+        <p className="text-muted-foreground text-sm sm:text-base">
           Manage your business information, staff members, and gym customers
         </p>
       </div>
 
-      <Tabs defaultValue="gym-members" className="w-full">
-                    <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4 h-auto bg-gray-50 border border-gray-200 rounded-lg">
+      <Tabs defaultValue="gym-members" className="w-full max-w-full">
+                    <TabsList className="grid grid-cols-2 md:grid-cols-4 mb-4 h-auto bg-gray-50 border border-gray-200 rounded-lg p-1">
           <TabsTrigger 
             value="staff" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md"
           >
-            <UserCheck className="h-4 w-4 sm:h-4 sm:w-4" />
+            <UserCheck className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Staff Members</span>
-            <span className="sm:hidden">Staff</span>
+            <span className="sm:hidden text-center">Staff</span>
           </TabsTrigger>
           <TabsTrigger 
             value="gym-members" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md"
           >
-            <Users className="h-4 w-4 sm:h-4 sm:w-4" />
+            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Gym Customers</span>
-            <span className="sm:hidden">Customers</span>
+            <span className="sm:hidden text-center">Customers</span>
           </TabsTrigger>
           <TabsTrigger 
             value="company" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md"
           >
-            <Building className="h-4 w-4 sm:h-4 sm:w-4" />
+            <Building className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Company Info</span>
-            <span className="sm:hidden">Company</span>
+            <span className="sm:hidden text-center">Company</span>
           </TabsTrigger>
           <TabsTrigger 
             value="categories" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-blue-500"
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md"
           >
-            <FolderOpen className="h-4 w-4 sm:h-4 sm:w-4" />
+            <FolderOpen className="h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Categories</span>
-            <span className="sm:hidden">Categories</span>
+            <span className="sm:hidden text-center">Categories</span>
           </TabsTrigger>
         </TabsList>
 
@@ -379,54 +379,56 @@ export default function BusinessSettings() {
                 staffMembers.map((member) => {
                   const roleInfo = getRoleInfo(member.role);
                   return (
-                    <div key={member.id} className="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <div key={member.id} className="bg-white border rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                               <UserCheck className="h-5 w-5 text-white" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-gray-900">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <span className="font-medium text-gray-900 truncate">
                                   {member.firstName && member.lastName 
                                     ? `${member.firstName} ${member.lastName}` 
                                     : member.email
                                   }
                                 </span>
                                 {member.firstName && member.lastName && (
-                                  <span className="text-sm text-gray-500">({member.email})</span>
+                                  <span className="text-xs sm:text-sm text-gray-500 truncate">({member.email})</span>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit">
                                   🔑 {roleInfo.label}
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-500 hidden sm:block">
                                   {roleInfo.description}
                                 </span>
                               </div>
-                              {member.phone && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  📞 {member.phone}
-                                </div>
-                              )}
-                              {member.department && (
-                                <div className="text-xs text-gray-500">
-                                  🏢 {member.department}
-                                </div>
-                              )}
+                              <div className="flex flex-col gap-1 mt-1">
+                                {member.phone && (
+                                  <div className="text-xs text-gray-500">
+                                    📞 {member.phone}
+                                  </div>
+                                )}
+                                {member.department && (
+                                  <div className="text-xs text-gray-500">
+                                    🏢 {member.department}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-shrink-0 justify-end">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditMember(member)}
                             disabled={loading || addingMember || updatingMember}
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 w-8 p-0"
                             title="Edit staff member"
                           >
                             <Edit2 className="h-4 w-4" />
@@ -437,7 +439,7 @@ export default function BusinessSettings() {
                             size="sm"
                             onClick={() => handlePasswordReset(member.email)}
                             disabled={loading || addingMember || sendingPasswordReset}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
                             title="Send password reset email"
                           >
                             {sendingPasswordReset ? (
@@ -452,7 +454,7 @@ export default function BusinessSettings() {
                             size="sm"
                             onClick={() => handleRemoveMember(member.id)}
                             disabled={loading || addingMember}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                             title="Remove staff member"
                           >
                             <X className="h-4 w-4" />
@@ -464,9 +466,9 @@ export default function BusinessSettings() {
                 })
               )}
 
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-4">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="staff-email" className="text-sm font-medium">
                         Email Address
@@ -501,7 +503,7 @@ export default function BusinessSettings() {
                       </Select>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <p className="text-xs text-gray-500">
                       They'll receive an invitation email to set up their staff account
                     </p>
@@ -509,17 +511,19 @@ export default function BusinessSettings() {
                       type="button"
                       onClick={handleAddMember}
                       disabled={!newMemberEmail.trim() || loading || addingMember}
-                      className="bg-blue-600 hover:bg-blue-700 min-w-[160px]"
+                      className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto sm:min-w-[160px]"
                     >
                       {addingMember ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending Invite...
+                          <span className="hidden sm:inline">Sending Invite...</span>
+                          <span className="sm:hidden">Sending...</span>
                         </>
                       ) : (
                         <>
                           <Plus className="h-4 w-4 mr-2" />
-                          Add Staff Member
+                          <span className="hidden sm:inline">Add Staff Member</span>
+                          <span className="sm:hidden">Add Staff</span>
                         </>
                       )}
                     </Button>
