@@ -67,6 +67,8 @@ export default function BookingsPage() {
   const [classesMap, setClassesMap] = useState<Map<string, GymClass>>(new Map())
   const [allBookings, setAllBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [classesLoaded, setClassesLoaded] = useState(false)
+  const [bookingsLoaded, setBookingsLoaded] = useState(false)
   const [isRealTimeConnected, setIsRealTimeConnected] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedStatus, setSelectedStatus] = useState<string>("all")
@@ -104,12 +106,14 @@ export default function BookingsPage() {
         classesData.forEach(cls => classMap.set(cls.id, cls))
         setClassesMap(classMap)
         
+        setClassesLoaded(true)
         setIsRealTimeConnected(true)
       },
       (error) => {
         console.error("Real-time classes error:", error)
         setError("Failed to load class information")
         setIsRealTimeConnected(false)
+        setClassesLoaded(true) // Still mark as loaded even on error
       }
     )
 
@@ -129,12 +133,14 @@ export default function BookingsPage() {
         console.log(`📡 Real-time bookings update: ${bookingsData.length} bookings loaded`)
         
         setAllBookings(bookingsData)
+        setBookingsLoaded(true)
         setIsRealTimeConnected(true)
       },
       (error) => {
         console.error("Real-time bookings error:", error)
         setError("Failed to load bookings")
         setIsRealTimeConnected(false)
+        setBookingsLoaded(true) // Still mark as loaded even on error
       }
     )
 
@@ -143,7 +149,8 @@ export default function BookingsPage() {
 
   // Process bookings when classes or bookings change
   useEffect(() => {
-    if (classesMap.size > 0 && allBookings.length >= 0) {
+    // Only process when both data sources have been loaded (regardless of content)
+    if (classesLoaded && bookingsLoaded) {
       // Apply filters
       let filteredBookings = allBookings
 
@@ -198,9 +205,10 @@ export default function BookingsPage() {
         totalCount: finalBookings.length
       }))
 
+      // Set loading to false once data processing is complete
       setLoading(false)
     }
-  }, [classesMap, allBookings, searchTerm, selectedCategory, selectedStatus, pagination.currentPage])
+  }, [classesLoaded, bookingsLoaded, classesMap, allBookings, searchTerm, selectedCategory, selectedStatus, pagination.currentPage])
 
   const handlePageChange = (direction: 'next' | 'previous') => {
     setPagination(prev => ({
