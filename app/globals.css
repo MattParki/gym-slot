@@ -132,8 +132,23 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 40;
   background: white;
+}
+
+/* Ensure modals appear above fullscreen calendar */
+[data-radix-portal] {
+  z-index: 50;
+}
+
+/* Dialog overlay should be above fullscreen */
+[data-radix-dialog-overlay] {
+  z-index: 45;
+}
+
+/* Dialog content should be above overlay */
+[data-radix-dialog-content] {
+  z-index: 50;
 }
 
 .calendar-fullscreen .rbc-calendar {
@@ -192,10 +207,21 @@ body {
     position: relative;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
   
   .calendar-fullscreen .rbc-date-cell:hover {
     background: #f8fafc;
+    transition: background-color 0.2s ease;
+  }
+  
+  .calendar-fullscreen .rbc-date-cell:active {
+    background: #e2e8f0;
+    transform: scale(0.98);
+    transition: all 0.1s ease;
   }
   
   .calendar-fullscreen .rbc-date-cell .rbc-date-cell-content {
@@ -246,6 +272,10 @@ body {
     color: white !important;
     opacity: 1 !important;
     z-index: 1 !important;
+    /* Enhanced touch handling */
+    touch-action: manipulation !important;
+    user-select: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
   
   .calendar-fullscreen .rbc-event:hover {

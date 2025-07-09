@@ -264,7 +264,7 @@ export function CalendarView({
 
   if (isFullscreen) {
     return (
-      <div className="calendar-fullscreen fixed inset-0 z-50 bg-gray-50 flex flex-col">
+      <div className="calendar-fullscreen fixed inset-0 z-40 bg-gray-50 flex flex-col">
         {/* Fullscreen Header */}
         <div className="flex items-center justify-between p-4 border-b bg-white/95 backdrop-blur-sm shadow-sm flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -296,7 +296,7 @@ export function CalendarView({
           {/* Debug info to verify events are loaded */}
           {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-gray-500 mb-2">
-              Events loaded: {calendarEvents.length}
+              Events loaded: {calendarEvents.length} | Handlers: enabled
             </div>
           )}
           
@@ -315,12 +315,17 @@ export function CalendarView({
                 height: "100%",
                 minHeight: "500px"
               }}
-              onSelectEvent={handleSelectEvent}
-              onSelectSlot={handleSelectSlot}
+              onSelectEvent={(event: any) => {
+                console.log('Fullscreen event clicked:', event.title) // Debug log
+                handleSelectEvent(event)
+              }}
+              onSelectSlot={(slotInfo: any) => {
+                console.log('Fullscreen slot clicked:', slotInfo.start) // Debug log
+                handleSelectSlot(slotInfo)
+              }}
               selectable
               views={["month", "week", "day"]}
               eventPropGetter={(event: any) => {
-                console.log('Fullscreen event:', event.title, event.start) // Debug log
                 return {
                   style: {
                     ...event.style,
@@ -328,6 +333,8 @@ export function CalendarView({
                     fontWeight: '600',
                     border: '2px solid rgba(255, 255, 255, 0.3)',
                     boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                    cursor: 'pointer',
+                    zIndex: 1,
                   }
                 }
               }}
