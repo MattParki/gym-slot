@@ -1,7 +1,7 @@
 // lib/createAccount.ts
 import { User } from "firebase/auth";
 import { getIdToken } from "firebase/auth";
-import { doc, setDoc, serverTimestamp, arrayUnion, updateDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, arrayUnion, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 /**
@@ -23,6 +23,7 @@ export async function createAccount(
 
   try {
     const idToken = await getIdToken(user);
+    console.log("Attempting API endpoint for:", user.email, "with role:", role);
 
     const response = await fetch("/api/create-account", {
       method: "POST",
@@ -33,19 +34,21 @@ export async function createAccount(
       body: JSON.stringify({ idToken, businessId, role })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log("API endpoint failed, using fallback:", errorText);
-      
-      // Only use fallback if API truly failed
-      return await createAccountDirectly(user, businessId, role);
+    // Check if response is ok
+    if (response.ok) {
+      const result = await response.json();
+      console.log("✅ API endpoint succeeded for:", user.email);
+      return result;
     }
 
-    const result = await response.json();
-    console.log("API endpoint succeeded:", result);
-    return result;
-  } catch (error) {
-    console.log("API endpoint error, using fallback:", error);
+    // Only use fallback if API truly failed
+    const errorText = await response.text();
+    console.log("❌ API endpoint failed, using fallback for:", user.email, "Error:", errorText);
+    return await createAccountDirectly(user, businessId, role);
+
+  } catch (networkError) {
+    // Only catch network errors, not API errors
+    console.log("🌐 Network error, using fallback for:", user.email, "Error:", networkError);
     return await createAccountDirectly(user, businessId, role);
   }
 }
@@ -69,14 +72,35 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
   const displayName = email.split('@')[0];
   const userRole = role || "customer"; // Default to customer if no role specified
 
+  console.log(`🔄 Fallback: Creating account for ${email} with role: ${userRole}`);
+
   try {
     if (businessId) {
       // User is joining an existing business
       const businessRef = doc(db, "businesses", businessId);
+      const businessDoc = await getDoc(businessRef);
+      
+      if (!businessDoc.exists()) {
+        throw new Error("Business not found");
+      }
+
+      const businessData = businessDoc.data();
+      const existingStaff = businessData.staffMembers || [];
+      const existingMembers = businessData.members || [];
+
+      // Check if user already exists in either array
+      const existsInStaff = existingStaff.some((member: any) => member.email === email);
+      const existsInMembers = existingMembers.some((member: any) => member.email === email);
+
+      if (existsInStaff || existsInMembers) {
+        console.log(`⚠️ Fallback: User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
+        return true; // Consider it successful since user already exists
+      }
       
       // Add user to appropriate array based on role
       if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
         // Add as staff member
+        console.log(`➕ Fallback: Adding ${email} as staff member with role: ${userRole}`);
         await updateDoc(businessRef, {
           staffMembers: arrayUnion({
             id: uid,
@@ -87,6 +111,7 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
         });
       } else {
         // Add as gym customer
+        console.log(`➕ Fallback: Adding ${email} as gym customer`);
         await updateDoc(businessRef, {
           members: arrayUnion({
             id: uid,

@@ -58,10 +58,31 @@ export async function POST(req) {
         }
 
         const userRole = role || "customer"; // Default to customer if no role specified
+        console.log(`Adding user ${email} to business ${businessId} with role: ${userRole}`);
+
+        const businessData = businessDoc.data();
+        const existingStaff = businessData.staffMembers || [];
+        const existingMembers = businessData.members || [];
+
+        // Check if user already exists in either array
+        const existsInStaff = existingStaff.some(member => member.email === email);
+        const existsInMembers = existingMembers.some(member => member.email === email);
+
+        if (existsInStaff || existsInMembers) {
+          console.log(`⚠️ User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
+          return NextResponse.json(
+            { 
+              success: true, 
+              message: "User already exists in business",
+              alreadyExists: true 
+            }
+          );
+        }
 
         // Add user to appropriate array based on role
         if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
           // Add as staff member
+          console.log(`➕ Adding ${email} as staff member with role: ${userRole}`);
           batch.update(businessRef, {
             staffMembers: db.FieldValue.arrayUnion({
               id: uid,
@@ -74,6 +95,7 @@ export async function POST(req) {
           });
         } else {
           // Add as gym customer/member
+          console.log(`➕ Adding ${email} as gym customer`);
           batch.update(businessRef, {
             members: db.FieldValue.arrayUnion({
               id: uid,
