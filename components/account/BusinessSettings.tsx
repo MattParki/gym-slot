@@ -12,12 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import {
   getBusiness,
   updateBusiness,
-  addBusinessMember,
+  addStaffMember,
   removeBusinessMember,
   removeBusinessStaffMember,
   updateBusinessStaffMember,
   sendPasswordResetEmail,
-  BusinessMember
+  BusinessMember,
+  AddMemberResult
 } from "@/services/businessService";
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
@@ -214,7 +215,23 @@ export default function BusinessSettings() {
     try {
       setAddingMember(true);
       const selectedRoleData = STAFF_ROLES.find(role => role.value === selectedRole);
-      const newMember = await addBusinessMember(businessId, newMemberEmail.trim(), selectedRole);
+      const result = await addStaffMember(businessId, newMemberEmail.trim(), selectedRole);
+
+      // Check if adding member was successful
+      if (!result.success) {
+        if (result.alreadyExists) {
+          // Show a friendly notification instead of an error
+          toast.error(`${newMemberEmail} is already a member of your business.`, {
+            duration: 5000,
+            icon: '👥',
+          });
+        } else {
+          toast.error(result.error || "Failed to add staff member.");
+        }
+        return;
+      }
+
+      const newMember = result.member!;
 
       // Send staff invitation email
       const response = await fetch("/api/send-invite", {

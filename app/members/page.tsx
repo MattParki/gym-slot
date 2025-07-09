@@ -70,7 +70,7 @@ export default function MembersPage() {
         ...member,
         joinedAt: member.joinedAt || member.createdAt || new Date().toISOString(),
         status: member.status || "active",
-        role: member.role || "member"
+        role: member.role || "customer"
       }))
       
       // Set total count
@@ -165,12 +165,13 @@ export default function MembersPage() {
     )
   }
 
-  const getRoleBadge = (role: string = "member") => {
+  const getRoleBadge = (role: string = "customer") => {
     const roleColors: { [key: string]: string } = {
       admin: "bg-purple-100 text-purple-800 border-purple-200",
       manager: "bg-blue-100 text-blue-800 border-blue-200",
       trainer: "bg-indigo-100 text-indigo-800 border-indigo-200",
-      member: "bg-gray-100 text-gray-800 border-gray-200",
+      customer: "bg-gray-100 text-gray-800 border-gray-200",
+      member: "bg-gray-100 text-gray-800 border-gray-200", // Keep for backwards compatibility
     }
 
     return (

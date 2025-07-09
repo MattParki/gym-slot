@@ -72,7 +72,7 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
   const uid = user.uid;
   const email = user.email;
   const displayName = email.split('@')[0];
-  const userRole = role || "member"; // Default to member if no role specified
+  const userRole = role || "customer"; // Default to customer if no role specified
 
   try {
     if (businessId) {
@@ -80,21 +80,23 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
       const businessRef = doc(db, "businesses", businessId);
       
       // Add user to appropriate array based on role
-      if (userRole === "staff") {
+      if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
+        // Add as staff member
         await updateDoc(businessRef, {
           staffMembers: arrayUnion({
             id: uid,
             email: email,
-            role: "staff"
+            role: userRole
           }),
           updatedAt: serverTimestamp()
         });
       } else {
+        // Add as gym customer
         await updateDoc(businessRef, {
           members: arrayUnion({
             id: uid,
             email: email,
-            role: "member"
+            role: "customer"
           }),
           updatedAt: serverTimestamp()
         });

@@ -22,7 +22,7 @@ function isStaffRole(role: string): boolean {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, businessId, businessName, role = "member" } = body;
+    const { email, businessId, businessName, role = "staff" } = body;
 
     if (!email || !businessId || !businessName) {
       return NextResponse.json(

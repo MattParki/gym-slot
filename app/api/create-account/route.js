@@ -33,7 +33,7 @@ export async function POST(req) {
 
     const idToken = authHeader.split("Bearer ")[1];
     const body = await req.json();
-    const { businessId } = body;
+    const { businessId, role } = body;
 
     try {
       const decodedToken = await auth.verifyIdToken(idToken);
@@ -46,7 +46,7 @@ export async function POST(req) {
       const now = new Date();
 
       if (businessId) {
-        // User is joining an existing business as a member
+        // User is joining an existing business
         const businessRef = db.collection("businesses").doc(businessId);
         const businessDoc = await businessRef.get();
 
@@ -57,25 +57,42 @@ export async function POST(req) {
           );
         }
 
-        // Add user as a member to the business
-        batch.update(businessRef, {
-          members: db.FieldValue.arrayUnion({
-            id: uid,
-            email: email,
-            role: "member",
-            joinedAt: now.toISOString(),
-            status: "active"
-          }),
-          updatedAt: now
-        });
+        const userRole = role || "customer"; // Default to customer if no role specified
 
-        // Create user profile as a member
+        // Add user to appropriate array based on role
+        if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
+          // Add as staff member
+          batch.update(businessRef, {
+            staffMembers: db.FieldValue.arrayUnion({
+              id: uid,
+              email: email,
+              role: userRole,
+              joinedAt: now.toISOString(),
+              status: "active"
+            }),
+            updatedAt: now
+          });
+        } else {
+          // Add as gym customer/member
+          batch.update(businessRef, {
+            members: db.FieldValue.arrayUnion({
+              id: uid,
+              email: email,
+              role: "customer",
+              joinedAt: now.toISOString(),
+              status: "active"
+            }),
+            updatedAt: now
+          });
+        }
+
+        // Create user profile with correct role
         if (userProfileDoc.exists) {
           batch.update(userProfileRef, {
             email: email,
             updatedAt: now,
             businessId: businessId,
-            role: 'member',
+            role: userRole,
           });
         } else {
           batch.set(userProfileRef, {
@@ -83,7 +100,7 @@ export async function POST(req) {
             createdAt: now,
             updatedAt: now,
             businessId: businessId,
-            role: 'member',
+            role: userRole,
             displayName: email.split('@')[0],
             onboardingCompleted: false,
           });

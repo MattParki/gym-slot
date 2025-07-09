@@ -91,46 +91,124 @@ export async function updateBusiness(businessId: string, data: Partial<Business>
   }
 }
 
-export async function addBusinessMember(businessId: string, email: string, role: string = "staff"): Promise<BusinessMember> {
+export interface AddMemberResult {
+  success: boolean;
+  member?: BusinessMember;
+  error?: string;
+  alreadyExists?: boolean;
+}
+
+// Add a staff member/employee (someone who works for the gym and has admin access)
+export async function addStaffMember(businessId: string, email: string, role: string = "staff"): Promise<AddMemberResult> {
   try {
     const businessRef = doc(db, "businesses", businessId);
     const business = await getDoc(businessRef);
     const businessData = business.data();
 
-    if (!businessData) throw new Error("Business not found");
+    if (!businessData) {
+      return { success: false, error: "Business not found" };
+    }
 
     // Check in both members and staffMembers arrays
     const members = businessData.members || [];
     const staffMembers = businessData.staffMembers || [];
     
-    if (members.some((member: BusinessMember) => member.email === email) ||
-        staffMembers.some((member: BusinessMember) => member.email === email)) {
-      throw new Error("Member already exists");
+    if (staffMembers.some((member: BusinessMember) => member.email === email)) {
+      return { 
+        success: false, 
+        error: "This person is already a staff member", 
+        alreadyExists: true 
+      };
     }
 
-    const newMember: BusinessMember = {
+    if (members.some((member: BusinessMember) => member.email === email)) {
+      return { 
+        success: false, 
+        error: "This person is already a gym customer. Please remove them from customers first if you want to make them a staff member.", 
+        alreadyExists: true 
+      };
+    }
+
+    const newStaffMember: BusinessMember = {
       id: Date.now().toString(),
       email,
       role
     };
 
-    // Store staff members in staffMembers array, regular gym members in members array
-    if (role === "staff") {
-      await updateDoc(businessRef, {
-        staffMembers: [...staffMembers, newMember],
-        updatedAt: serverTimestamp()
-      });
-    } else {
-      await updateDoc(businessRef, {
-        members: [...members, newMember],
-        updatedAt: serverTimestamp()
-      });
+    await updateDoc(businessRef, {
+      staffMembers: [...staffMembers, newStaffMember],
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, member: newStaffMember };
+  } catch (error) {
+    console.error("Error adding staff member:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to add staff member" 
+    };
+  }
+}
+
+// Add a gym customer (someone who pays to use the gym services)
+export async function addGymCustomer(businessId: string, email: string): Promise<AddMemberResult> {
+  try {
+    const businessRef = doc(db, "businesses", businessId);
+    const business = await getDoc(businessRef);
+    const businessData = business.data();
+
+    if (!businessData) {
+      return { success: false, error: "Business not found" };
     }
 
-    return newMember;
+    // Check in both members and staffMembers arrays
+    const members = businessData.members || [];
+    const staffMembers = businessData.staffMembers || [];
+    
+    if (members.some((member: BusinessMember) => member.email === email)) {
+      return { 
+        success: false, 
+        error: "This person is already a gym customer", 
+        alreadyExists: true 
+      };
+    }
+
+    if (staffMembers.some((member: BusinessMember) => member.email === email)) {
+      return { 
+        success: false, 
+        error: "This person is already a staff member. Staff members have different access than gym customers.", 
+        alreadyExists: true 
+      };
+    }
+
+    const newCustomer: BusinessMember = {
+      id: Date.now().toString(),
+      email,
+      role: "customer" // Clear role for gym customers
+    };
+
+    await updateDoc(businessRef, {
+      members: [...members, newCustomer],
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, member: newCustomer };
   } catch (error) {
-    console.error("Error adding business member:", error);
-    throw error;
+    console.error("Error adding gym customer:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to add gym customer" 
+    };
+  }
+}
+
+// Legacy function - kept for backwards compatibility but routes to appropriate function
+export async function addBusinessMember(businessId: string, email: string, role: string = "staff"): Promise<AddMemberResult> {
+  // Route to appropriate function based on role
+  if (role === "customer") {
+    return addGymCustomer(businessId, email);
+  } else {
+    return addStaffMember(businessId, email, role);
   }
 }
 
