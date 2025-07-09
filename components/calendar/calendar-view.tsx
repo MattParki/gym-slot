@@ -292,7 +292,7 @@ export function CalendarView({
         </div>
 
         {/* Fullscreen Calendar */}
-        <div className="flex-1 p-4 overflow-hidden flex flex-col">
+        <div className="flex-1 p-4 overflow-auto flex flex-col">
           {/* Debug info to verify events are loaded */}
           {process.env.NODE_ENV === 'development' && (
             <div className="text-xs text-gray-500 mb-2">
@@ -300,7 +300,7 @@ export function CalendarView({
             </div>
           )}
           
-          <div className="flex-1 min-h-0">
+          <div className="w-full">
             <Calendar
               key={`fullscreen-${isFullscreen}`}
               localizer={localizer}
@@ -312,8 +312,8 @@ export function CalendarView({
               onView={(view: "month" | "week" | "day") => setCurrentView(view)}
               onNavigate={(newDate: Date) => setCurrentDate(newDate)}
               style={{ 
-                height: "100%",
-                minHeight: "500px"
+                height: currentView === "month" ? "600px" : currentView === "week" ? "800px" : "1000px",
+                minHeight: currentView === "month" ? "600px" : "800px"
               }}
               onSelectEvent={(event: any) => {
                 console.log('Fullscreen event clicked:', event.title) // Debug log
