@@ -10,7 +10,7 @@ import { ClassDropZone } from "./class-drop-zone"
 import type { GymClass, ScheduledClass } from "./gym-booking-system"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Maximize2, Minimize2, X } from "lucide-react"
+import { Maximize2, Minimize2, X, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react"
 
 const locales = {
   "en-US": require("date-fns/locale/en-US"),
@@ -30,6 +30,152 @@ interface CalendarViewProps {
   onScheduleClass: (classId: string, date: Date, startTime: string) => void
   onDateClick: (date: Date) => void
   onClassClick: (gymClass: GymClass, scheduled: ScheduledClass) => void
+}
+
+// Custom Toolbar Component
+interface CustomToolbarProps {
+  date: Date
+  view: string
+  views: string[]
+  label: string
+  onNavigate: (action: string) => void
+  onView: (view: string) => void
+}
+
+const CustomToolbar = ({ date, view, views, label, onNavigate, onView }: CustomToolbarProps) => {
+  const goToToday = () => {
+    onNavigate('TODAY')
+  }
+
+  const goToPrev = () => {
+    onNavigate('PREV')
+  }
+
+  const goToNext = () => {
+    onNavigate('NEXT')
+  }
+
+  return (
+    <div className="calendar-custom-toolbar">
+      {/* Mobile Layout */}
+      <div className="block sm:hidden space-y-3">
+        {/* Header with current month/date */}
+        <div className="flex items-center justify-center">
+          <h2 className="text-lg font-bold text-gray-900 text-center">{label}</h2>
+        </div>
+        
+        {/* Navigation Row */}
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrev}
+            className="flex-1 bg-white hover:bg-gray-50 border-gray-300"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          
+          <Button
+            variant="default"
+            size="sm"
+            onClick={goToToday}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+          >
+            <CalendarIcon className="h-4 w-4 mr-1" />
+            Today
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNext}
+            className="flex-1 bg-white hover:bg-gray-50 border-gray-300"
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+        
+        {/* View Toggle Row */}
+        <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+          {views.map((viewName) => (
+            <Button
+              key={viewName}
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(viewName)}
+              className={`flex-1 text-xs font-medium transition-all ${
+                view === viewName
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              {viewName.charAt(0).toUpperCase() + viewName.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden sm:flex items-center justify-between gap-4">
+        {/* Left: Navigation */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrev}
+            className="bg-white hover:bg-gray-50 border-gray-300"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
+          <Button
+            variant="default"
+            size="sm"
+            onClick={goToToday}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Today
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNext}
+            className="bg-white hover:bg-gray-50 border-gray-300"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Center: Current Month/Date */}
+        <div className="flex-1 text-center">
+          <h2 className="text-xl font-bold text-gray-900">{label}</h2>
+        </div>
+
+        {/* Right: View Toggle */}
+        <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+          {views.map((viewName) => (
+            <Button
+              key={viewName}
+              variant="ghost"
+              size="sm"
+              onClick={() => onView(viewName)}
+              className={`px-4 py-2 text-sm font-medium transition-all ${
+                view === viewName
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              {viewName.charAt(0).toUpperCase() + viewName.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function CalendarView({
@@ -160,6 +306,9 @@ export function CalendarView({
               eventPropGetter={(event: any) => ({
                 style: event.style,
               })}
+              components={{
+                toolbar: CustomToolbar,
+              }}
             />
           </div>
         </div>
@@ -201,6 +350,9 @@ export function CalendarView({
             eventPropGetter={(event: any) => ({
               style: event.style,
             })}
+            components={{
+              toolbar: CustomToolbar,
+            }}
           />
         </div>
       </div>
