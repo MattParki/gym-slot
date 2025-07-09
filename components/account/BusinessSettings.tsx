@@ -17,6 +17,7 @@ import {
   removeBusinessStaffMember,
   updateBusinessStaffMember,
   sendPasswordResetEmail,
+  removeDuplicateStaffMembers,
   BusinessMember,
   AddMemberResult
 } from "@/services/businessService";
@@ -283,6 +284,28 @@ export default function BusinessSettings() {
     }
   };
 
+  const handleRemoveDuplicates = async () => {
+    if (!businessId) return;
+
+    try {
+      setLoading(true);
+      await removeDuplicateStaffMembers(businessId);
+      
+      // Refresh the staff members list
+      const business = await getBusiness(user!.uid);
+      if (business) {
+        setStaffMembers(business.staffMembers || []);
+      }
+      
+      toast.success("Duplicate staff members removed successfully!");
+    } catch (error) {
+      console.error("Error removing duplicates:", error);
+      toast.error("Failed to remove duplicates. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (initialLoading) {
     return <LoadingScreen message="Loading business settings..." fullScreen={false} />;
   }
@@ -380,8 +403,31 @@ export default function BusinessSettings() {
                   These staff members can log in and manage your gym's bookings, classes, and customers.
                 </p>
               </div>
-              <div className="bg-white border rounded-lg px-3 py-1">
-                <span className="text-sm font-medium text-gray-700">{staffMembers.length} Staff Members</span>
+              <div className="flex items-center gap-2">
+                <div className="bg-white border rounded-lg px-3 py-1">
+                  <span className="text-sm font-medium text-gray-700">{staffMembers.length} Staff Members</span>
+                </div>
+                {staffMembers.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveDuplicates}
+                    disabled={loading}
+                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                    title="Remove duplicate staff members"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Clean Duplicates</span>
+                        <span className="sm:hidden">Clean</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
 

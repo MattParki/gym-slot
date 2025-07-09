@@ -35,23 +35,18 @@ export async function createAccount(
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorMessage;
-
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.error || "Unknown server error";
-      } catch (parseError) {
-        errorMessage = `Server error: ${errorText.substring(0, 100)}...`;
-      }
-
-      // fallback for accounts
-
-      return await createAccountDirectly(user ?? 'none', businessId, role);
+      console.log("API endpoint failed, using fallback:", errorText);
+      
+      // Only use fallback if API truly failed
+      return await createAccountDirectly(user, businessId, role);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log("API endpoint succeeded:", result);
+    return result;
   } catch (error) {
-    return await createAccountDirectly(user ?? 'none', businessId, role);
+    console.log("API endpoint error, using fallback:", error);
+    return await createAccountDirectly(user, businessId, role);
   }
 }
 

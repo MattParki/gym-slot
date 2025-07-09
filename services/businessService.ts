@@ -308,3 +308,40 @@ export async function sendPasswordResetEmail(email: string): Promise<{ devMode?:
     throw error;
   }
 }
+
+// Remove duplicate staff members (cleanup utility)
+export async function removeDuplicateStaffMembers(businessId: string): Promise<void> {
+  try {
+    const businessRef = doc(db, "businesses", businessId);
+    const business = await getDoc(businessRef);
+    const businessData = business.data();
+
+    if (!businessData) {
+      throw new Error("Business not found");
+    }
+
+    const staffMembers = businessData.staffMembers || [];
+    
+    // Remove duplicates based on email
+    const uniqueStaffMembers = staffMembers.reduce((acc: BusinessMember[], current: BusinessMember) => {
+      const existingMember = acc.find(member => member.email === current.email);
+      if (!existingMember) {
+        acc.push(current);
+      } else {
+        console.log(`Removing duplicate staff member: ${current.email} (ID: ${current.id})`);
+      }
+      return acc;
+    }, []);
+
+    if (uniqueStaffMembers.length < staffMembers.length) {
+      await updateDoc(businessRef, {
+        staffMembers: uniqueStaffMembers,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`Removed ${staffMembers.length - uniqueStaffMembers.length} duplicate staff members`);
+    }
+  } catch (error) {
+    console.error("Error removing duplicate staff members:", error);
+    throw error;
+  }
+}
