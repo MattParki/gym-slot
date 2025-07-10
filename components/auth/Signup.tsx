@@ -86,34 +86,39 @@ export default function DemoSignup() {
         
         if (businessId) {
           const successMessage = role && isStaffRole(role) 
-            ? `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 Please check your email (including spam folder) for a verification link, then you can access the admin dashboard.`
-            : "Welcome to the gym! 🎉 Please check your email (including spam folder) for a verification link, then download the mobile app to start booking classes.";
+            ? `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 You can now access the admin dashboard and view your profile.`
+            : "Welcome to the gym! 🎉 You can now log in and view your profile.";
           
           toast.success(successMessage, {
-            duration: 8000,
+            duration: 6000,
             icon: '🎉',
           });
+          
+          // Redirect to account settings where users can see their role
+          setTimeout(() => {
+            router.push("/account-settings");
+          }, 2000);
         } else {
           toast.success(
-            "Account created successfully! ✉️ Please check your email (including spam folder) for a verification link, then download the mobile app.",
+            "Account created successfully! ✉️ You can now log in and access your dashboard.",
             {
-              duration: 8000,
+              duration: 6000,
               icon: '✉️',
             }
           );
+          
+          // Redirect to login page for demo accounts
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
         }
-
-        // Redirect to download app page after short delay
-        setTimeout(() => {
-          router.push("/download-app");
-        }, 2000);
       } catch (accountError) {
         console.error("Error creating account:", accountError);
         toast.error(`Account created but setup failed: ${(accountError as Error).message}`);
 
-        // Even if account setup fails, redirect to download app
+        // Even if account setup fails, redirect to login page
         setTimeout(() => {
-          router.push("/download-app");
+          router.push("/login");
         }, 3000);
       }
     } catch (err) {

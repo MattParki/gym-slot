@@ -107,7 +107,7 @@ export default function UserProfileSettings() {
         <Alert variant="default" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Only gym owners can update profile information. Contact your account administrator for changes.
+            You can view your assigned role below. Only business owners can update profile information. Contact your account administrator for changes.
           </AlertDescription>
         </Alert>
       )}
@@ -148,7 +148,18 @@ export default function UserProfileSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="role">Role</Label>
+              {!isBusinessOwner && (
+                <MobileTooltip
+                  content={
+                    <p className="max-w-xs">
+                      Your role is assigned by your business administrator. Contact them to request role changes.
+                    </p>
+                  }
+                />
+              )}
+            </div>
             <Select
               value={role}
               onValueChange={setRole}

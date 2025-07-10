@@ -12,7 +12,13 @@ export interface UserProfile {
 }
 
 export const roleOptions = [
-  { value: 'business-owner', label: 'Business Owner' },
+  { value: 'owner', label: 'Business Owner' },
+  { value: 'administrator', label: 'Administrator' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'staff', label: 'Staff Member' },
+  { value: 'personal_trainer', label: 'Personal Trainer' },
+  { value: 'receptionist', label: 'Receptionist' },
+  { value: 'customer', label: 'Customer/Member' },
 ];
 
 export const companySizeOptions = [

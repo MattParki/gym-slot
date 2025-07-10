@@ -13,8 +13,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, or } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { UserCredential } from "firebase/auth";
-import { sendEmailVerification } from "firebase/auth"; 
+import { UserCredential } from "firebase/auth"; 
 
 interface AuthContextType {
   user: User | null;
@@ -54,22 +53,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signup(email: string, password: string) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   
-    // Send email verification
-    await sendEmailVerification(userCredential.user);
-  
+    // No email verification required - users can access their profile immediately
     return userCredential;
   }
   
-  // Helper function to check if email belongs to any business (business owners only)
+  // Helper function to check if email belongs to any business (as owner, staff member, or customer)
   async function checkEmailBelongsToBusiness(email: string): Promise<boolean> {
     try {
       const businessesRef = collection(db, 'businesses');
+      const businessSnapshot = await getDocs(businessesRef);
       
-      // Only check if email matches business email (business owner), NOT members
-      const businessEmailQuery = query(businessesRef, where('email', '==', email));
-      const businessEmailSnapshot = await getDocs(businessEmailQuery);
+      for (const doc of businessSnapshot.docs) {
+        const businessData = doc.data();
+        
+        // Check if user is business owner
+        if (businessData.email === email) {
+          return true;
+        }
+        
+        // Check if user is in staffMembers array
+        const staffMembers = businessData.staffMembers || [];
+        if (staffMembers.some((member: any) => member.email === email)) {
+          return true;
+        }
+        
+        // Check if user is in members array (customers)
+        const members = businessData.members || [];
+        if (members.some((member: any) => member.email === email)) {
+          return true;
+        }
+      }
       
-      return !businessEmailSnapshot.empty;
+      return false;
     } catch (error) {
       console.error('Error checking business email:', error);
       return false;
@@ -83,11 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
     // Reload user to get the latest verification status
     await user.reload();
-  
-    if (!user.emailVerified) {
-      await signOut(auth); // Prevent session from persisting
-      throw new Error("Please verify your email address. Check your inbox and spam folder.");
-    }
 
     // Check if email belongs to any business
     const emailBelongsToBusiness = await checkEmailBelongsToBusiness(email);
