@@ -13,6 +13,7 @@ export interface UserProfile {
 
 export const roleOptions = [
   { value: 'owner', label: 'Business Owner' },
+  { value: 'business-owner', label: 'Business Owner' }, // Legacy support
   { value: 'administrator', label: 'Administrator' },
   { value: 'manager', label: 'Manager' },
   { value: 'staff', label: 'Staff Member' },

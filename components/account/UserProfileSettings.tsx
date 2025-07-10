@@ -107,7 +107,7 @@ export default function UserProfileSettings() {
         <Alert variant="default" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            You can view your assigned role below. Only business owners can update profile information. Contact your account administrator for changes.
+            You can view your assigned role below and update your display name. Only business owners can change roles and other business information. Contact your account administrator for role changes.
           </AlertDescription>
         </Alert>
       )}
@@ -121,8 +121,8 @@ export default function UserProfileSettings() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your display name"
-              disabled={!isBusinessOwner}
-              className={!isBusinessOwner ? "bg-muted cursor-not-allowed" : ""}
+              disabled={false}
+              className=""
             />
           </div>
 
@@ -179,7 +179,7 @@ export default function UserProfileSettings() {
           </div>
         </div>
 
-        <Button type="submit" disabled={loading || !isBusinessOwner}>
+        <Button type="submit" disabled={loading}>
           {loading ? "Saving..." : "Save Changes"}
         </Button>
       </form>
