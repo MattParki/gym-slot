@@ -94,6 +94,7 @@ export default function BusinessSettings() {
             }
             setMembers(business.members || []);
             // Only set raw staffMembers, let real-time listener handle hasAccount/profile
+            console.log("🏢 Loaded staff members from business:", business.staffMembers);
             setStaffMembers(business.staffMembers || []);
             setCompanyName(business.companyName || "");
             setContactInfo(business.contactInfo || "");
@@ -118,14 +119,24 @@ export default function BusinessSettings() {
     // Normalize emails to lowercase
     const staffEmails = staffMembers.map((m) => (m.email || "").trim().toLowerCase());
     if (staffEmails.length === 0) return;
+    
+    console.log("🔍 Setting up real-time listener for staff emails:", staffEmails);
+    
     const usersRef = collection(db, "users");
     let unsubscribes: (() => void)[] = [];
     const updateStaffFromSnapshot = (docs: any[]) => {
+      console.log("📊 Real-time listener received docs:", docs.length);
+      docs.forEach(doc => {
+        console.log("📄 User doc:", { email: doc.email, uid: doc.uid, firstName: doc.firstName, lastName: doc.lastName });
+      });
+      
       setStaffMembers((prev) =>
         prev.map((member) => {
           const memberEmail = (member.email || "").trim().toLowerCase();
           const userDoc = docs.find((d) => ((d.email || "").trim().toLowerCase() === memberEmail));
+          
           if (userDoc) {
+            console.log(`✅ Found matching user for ${memberEmail}:`, userDoc);
             return {
               ...member,
               id: userDoc.uid || member.id, // Sync the id to the user's UID
@@ -135,6 +146,7 @@ export default function BusinessSettings() {
               phone: userDoc.phone || member.phone,
             };
           } else {
+            console.log(`❌ No matching user found for ${memberEmail}`);
             return {
               ...member,
               hasAccount: false,
@@ -146,8 +158,10 @@ export default function BusinessSettings() {
     // Chunk staffEmails for Firestore 'in' query limit
     for (let i = 0; i < staffEmails.length; i += 10) {
       const chunk = staffEmails.slice(i, i + 10);
+      console.log(`🔍 Setting up listener for chunk ${i/10 + 1}:`, chunk);
       const chunkQuery = query(usersRef, where("email", "in", chunk));
       const unsubscribe = onSnapshot(chunkQuery, (snapshot) => {
+        console.log(`📡 Real-time update received for chunk ${i/10 + 1}:`, snapshot.docs.length, "docs");
         const docs = snapshot.docs.map((doc) => ({ ...doc.data(), uid: doc.id }));
         updateStaffFromSnapshot(docs);
       });
@@ -736,6 +750,40 @@ export default function BusinessSettings() {
                       </Select>
                     </div>
                   </div>
+                  
+                  {/* DEBUG: Temporary test button */}
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      const testEmail = "mattparkinson_@outlook.com";
+                      console.log("🔍 DEBUG: Testing user lookup for:", testEmail);
+                      
+                      const usersRef = collection(db, "users");
+                      const q = query(usersRef, where("email", "==", testEmail));
+                      const querySnapshot = await getDocs(q);
+                      
+                      console.log("📊 DEBUG: Query result:", querySnapshot.docs.length, "docs found");
+                      querySnapshot.docs.forEach((doc, index) => {
+                        console.log(`📄 DEBUG: Doc ${index + 1}:`, doc.data());
+                      });
+                      
+                      // Also test with normalized email
+                      const normalizedEmail = testEmail.trim().toLowerCase();
+                      const q2 = query(usersRef, where("email", "==", normalizedEmail));
+                      const querySnapshot2 = await getDocs(q2);
+                      
+                      console.log("📊 DEBUG: Normalized query result:", querySnapshot2.docs.length, "docs found");
+                      querySnapshot2.docs.forEach((doc, index) => {
+                        console.log(`📄 DEBUG: Normalized Doc ${index + 1}:`, doc.data());
+                      });
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="text-purple-600 border-purple-300"
+                  >
+                    🔍 DEBUG: Test User Lookup
+                  </Button>
+                  
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <p className="text-xs text-gray-500">
                       They'll receive an invitation email to set up their staff account
