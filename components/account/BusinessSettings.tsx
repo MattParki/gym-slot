@@ -73,6 +73,11 @@ export default function BusinessSettings() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const staffListenerUnsubscribe = useRef<(() => void) | null>(null);
+  const [pendingDeleteMember, setPendingDeleteMember] = useState<BusinessMember | null>(null);
+  const [deletePreview, setDeletePreview] = useState<{ bookingsCount: number; classesCount: number } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -370,19 +375,56 @@ export default function BusinessSettings() {
 
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!businessId) return;
-
+    const member = staffMembers.find((m) => m.id === memberId);
+    if (!member) return;
+    setPendingDeleteMember(member);
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeletePreview(null);
+    setDeleteConfirmed(false);
+    // Call API to preview what will be deleted
     try {
-      setLoading(true);
-      await removeBusinessStaffMember(businessId, memberId);
-
-      setStaffMembers(staffMembers.filter(member => member.id !== memberId));
-
-      toast.success("Staff member has been removed from your business.");
-    } catch (error) {
-      toast.error("Failed to remove staff member. Please try again.");
+      const res = await fetch("/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: member.id, email: member.email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setDeletePreview({ bookingsCount: data.bookingsCount, classesCount: data.classesCount });
+      } else {
+        setDeleteError(data.error || "Failed to preview deletion");
+      }
+    } catch (e: any) {
+      setDeleteError(e.message || "Failed to preview deletion");
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handler to confirm delete
+  const confirmDeleteMember = async () => {
+    if (!pendingDeleteMember) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/delete-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: pendingDeleteMember.id, email: pendingDeleteMember.email, confirm: true })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDeleteConfirmed(true);
+        // Remove from staff list in UI
+        setStaffMembers((prev) => prev.filter((m) => m.id !== pendingDeleteMember.id));
+      } else {
+        setDeleteError(data.error || "Failed to delete user");
+      }
+    } catch (e: any) {
+      setDeleteError(e.message || "Failed to delete user");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -993,6 +1035,48 @@ export default function BusinessSettings() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Staff Member Confirmation Dialog */}
+      <Dialog open={!!pendingDeleteMember} onOpenChange={(open) => { if (!open) setPendingDeleteMember(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Delete Staff Member</DialogTitle>
+          </DialogHeader>
+          {pendingDeleteMember && (
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 p-3 rounded">
+                <div className="font-medium text-red-700 mb-1">Warning: This action is permanent!</div>
+                <div className="text-sm text-red-600">
+                  This will <b>permanently delete</b> <span className="font-semibold">{pendingDeleteMember.email}</span> from the system, including their login, profile, and all business memberships.<br />
+                  {deletePreview && (deletePreview.bookingsCount > 0 || deletePreview.classesCount > 0) && (
+                    <>
+                      <br />
+                      <span className="font-semibold">This will also cancel:</span>
+                      <ul className="list-disc ml-6">
+                        {deletePreview.bookingsCount > 0 && <li>{deletePreview.bookingsCount} bookings</li>}
+                        {deletePreview.classesCount > 0 && <li>{deletePreview.classesCount} classes</li>}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </div>
+              {deleteError && <div className="text-red-600 text-sm">{deleteError}</div>}
+              {deleteConfirmed ? (
+                <div className="text-green-700 font-medium">User deleted successfully.</div>
+              ) : (
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setPendingDeleteMember(null)} disabled={deleteLoading}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={confirmDeleteMember} disabled={deleteLoading || !deletePreview}>
+                    {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Delete User
+                  </Button>
+                </DialogFooter>
+              )}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
