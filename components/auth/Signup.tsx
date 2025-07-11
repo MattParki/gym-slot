@@ -10,6 +10,8 @@ import { createAccount } from "@/lib/createAccount";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { UserPlus, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 // Helper function to get role display name
 const getRoleDisplayName = (role: string): string => {
@@ -79,105 +81,95 @@ export default function DemoSignup() {
     try {
       setLoading(true);
 
-      // First, create the Firebase auth account
-      const userCredential = await signup(email, password);
-
-      // Then create the associated account and add to business
-      try {
-        await createAccount(userCredential.user, businessId, role);
-        
-        if (businessId) {
-          if (role && isStaffRole(role)) {
-            // Staff member signup - redirect to CRM
-            const successMessage = `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 You can now access the admin dashboard and view your profile.`;
-            
-            toast.success(successMessage, {
-              duration: 6000,
-              icon: '🎉',
-            });
-            
-            // Redirect to account settings where users can see their role
-            setTimeout(() => {
-              router.push("/account-settings");
-            }, 2000);
-          } else {
-            // Customer signup - show confirmation and send email
-            const successMessage = "Welcome to the gym! 🎉 Your account has been created successfully. Please check your email for next steps and download the mobile app to book classes.";
-            
-            setSuccessMessage(successMessage);
-            setSignupSuccess(true);
-            
-            toast.success(successMessage, {
-              duration: 8000,
-              icon: '📱',
-            });
-            
-            // Send customer welcome email with mobile app download links
-            try {
-              await fetch("/api/send-email", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  from: "noreply@gym-slot.com",
-                  to: email,
-                  subject: "Welcome to the Gym - Download the Mobile App",
-                  html: `
-                    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-                      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
-                        <h1 style="color: white; margin: 0; font-size: 32px;">Welcome to the Gym! 🎉</h1>
-                        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 18px;">
-                          Your account is ready
+      if (businessId && (!role || !isStaffRole(role))) {
+        // Customer signup - create account without automatic login
+        try {
+          // Create Firebase auth account without logging in
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          
+          // Create the associated account and add to business
+          await createAccount(userCredential.user, businessId, role);
+          
+          // Sign out immediately to prevent CRM access
+          await signOut(auth);
+          
+          // Show success message and send email
+          const successMessage = "Welcome to the gym! 🎉 Your account has been created successfully. You are not logged into this web platform - please check your email for next steps and download the mobile app to book classes.";
+          
+          setSuccessMessage(successMessage);
+          setSignupSuccess(true);
+          
+          toast.success(successMessage, {
+            duration: 8000,
+            icon: '📱',
+          });
+          
+          // Send customer welcome email with mobile app download links
+          try {
+            await fetch("/api/send-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "noreply@gym-slot.com",
+                to: email,
+                subject: "Welcome to the Gym - Download the Mobile App",
+                html: `
+                  <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px; text-align: center; border-radius: 8px 8px 0 0;">
+                      <h1 style="color: white; margin: 0; font-size: 32px;">Welcome to the Gym! 🎉</h1>
+                      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 18px;">
+                        Your account is ready
+                      </p>
+                    </div>
+                    
+                    <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
+                      <h2 style="color: #059669; margin: 0 0 20px 0; font-size: 24px;">Next Steps: Download the Mobile App</h2>
+                      
+                      <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                        Your gym membership account has been successfully created! To start booking classes and managing your membership, please download our mobile app.
+                      </p>
+                      
+                      <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+                        <h3 style="color: #059669; margin: 0 0 15px 0; font-size: 18px;">📱 Download the Mobile App</h3>
+                        <p style="color: #374151; margin: 0 0 15px 0;">
+                          The mobile app is where you'll:
+                        </p>
+                        <ul style="color: #374151; margin: 0; padding-left: 20px;">
+                          <li style="margin-bottom: 8px;">Book and manage your class reservations</li>
+                          <li style="margin-bottom: 8px;">View your membership details and payment history</li>
+                          <li style="margin-bottom: 8px;">Receive notifications about classes and gym updates</li>
+                          <li style="margin-bottom: 8px;">Access your digital membership card</li>
+                        </ul>
+                      </div>
+                      
+                      <div style="text-align: center; margin: 30px 0;">
+                        <div style="display: inline-block; margin: 0 10px;">
+                          <a href="https://apps.apple.com/app/gymslot" style="background: #000; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">
+                            📱 Download for iOS
+                          </a>
+                        </div>
+                        <div style="display: inline-block; margin: 0 10px;">
+                          <a href="https://play.google.com/store/apps/details?id=com.gymslot.app" style="background: #000; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">
+                            🤖 Download for Android
+                          </a>
+                        </div>
+                      </div>
+                      
+                      <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                        <p style="color: #92400e; margin: 0; font-weight: 500;">
+                          💡 Tip: Use the same email and password you just created to log into the mobile app!
                         </p>
                       </div>
                       
-                      <div style="background: white; padding: 40px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb;">
-                        <h2 style="color: #059669; margin: 0 0 20px 0; font-size: 24px;">Next Steps: Download the Mobile App</h2>
-                        
-                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                          Your gym membership account has been successfully created! To start booking classes and managing your membership, please download our mobile app.
-                        </p>
-                        
-                        <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
-                          <h3 style="color: #059669; margin: 0 0 15px 0; font-size: 18px;">📱 Download the Mobile App</h3>
-                          <p style="color: #374151; margin: 0 0 15px 0;">
-                            The mobile app is where you'll:
-                          </p>
-                          <ul style="color: #374151; margin: 0; padding-left: 20px;">
-                            <li style="margin-bottom: 8px;">Book and manage your class reservations</li>
-                            <li style="margin-bottom: 8px;">View your membership details and payment history</li>
-                            <li style="margin-bottom: 8px;">Receive notifications about classes and gym updates</li>
-                            <li style="margin-bottom: 8px;">Access your digital membership card</li>
-                          </ul>
-                        </div>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                          <div style="display: inline-block; margin: 0 10px;">
-                            <a href="https://apps.apple.com/app/gymslot" style="background: #000; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">
-                              📱 Download for iOS
-                            </a>
-                          </div>
-                          <div style="display: inline-block; margin: 0 10px;">
-                            <a href="https://play.google.com/store/apps/details?id=com.gymslot.app" style="background: #000; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; font-size: 16px;">
-                              🤖 Download for Android
-                            </a>
-                          </div>
-                        </div>
-                        
-                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
-                          <p style="color: #92400e; margin: 0; font-weight: 500;">
-                            💡 Tip: Use the same email and password you just created to log into the mobile app!
-                          </p>
-                        </div>
-                        
-                        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
-                          Need help? Contact your gym staff or reply to this email for assistance.
-                        </p>
-                      </div>
+                      <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0; text-align: center;">
+                        Need help? Contact your gym staff or reply to this email for assistance.
+                      </p>
                     </div>
-                  `,
-                  text: `
+                  </div>
+                `,
+                text: `
 Welcome to the Gym! 🎉
 
 Your account has been successfully created! To start booking classes and managing your membership, please download our mobile app.
@@ -195,39 +187,64 @@ The mobile app is where you'll:
 Tip: Use the same email and password you just created to log into the mobile app!
 
 Need help? Contact your gym staff for assistance.
-                  `,
-                  userId: "system",
-                }),
-              });
-            } catch (emailError) {
-              console.error("Failed to send customer welcome email:", emailError);
-              // Don't show error to user - account creation was successful
-            }
-            
-            // Stay on signup page with success message, don't redirect
+                `,
+                userId: "system",
+              }),
+            });
+          } catch (emailError) {
+            console.error("Failed to send customer welcome email:", emailError);
+            // Don't show error to user - account creation was successful
           }
-        } else {
-          toast.success(
-            "Account created successfully! ✉️ You can now log in and access your dashboard.",
-            {
-              duration: 6000,
-              icon: '✉️',
-            }
-          );
           
-          // Redirect to login page for demo accounts
+          // Stay on signup page with success message, don't redirect
+        } catch (accountError) {
+          console.error("Error creating customer account:", accountError);
+          toast.error(`Account creation failed: ${(accountError as Error).message}`);
+        }
+      } else {
+        // Staff member or demo account signup - use normal flow with automatic login
+        const userCredential = await signup(email, password);
+
+        // Then create the associated account and add to business
+        try {
+          await createAccount(userCredential.user, businessId, role);
+          
+          if (businessId) {
+            // Staff member signup - redirect to CRM
+            const successMessage = `Welcome to the team as a ${getRoleDisplayName(role || 'staff member')}! 🎉 You can now access the admin dashboard and view your profile.`;
+            
+            toast.success(successMessage, {
+              duration: 6000,
+              icon: '🎉',
+            });
+            
+            // Redirect to account settings where users can see their role
+            setTimeout(() => {
+              router.push("/account-settings");
+            }, 2000);
+          } else {
+            toast.success(
+              "Account created successfully! ✉️ You can now log in and access your dashboard.",
+              {
+                duration: 6000,
+                icon: '✉️',
+              }
+            );
+            
+            // Redirect to login page for demo accounts
+            setTimeout(() => {
+              router.push("/login");
+            }, 2000);
+          }
+        } catch (accountError) {
+          console.error("Error creating account:", accountError);
+          toast.error(`Account created but setup failed: ${(accountError as Error).message}`);
+
+          // Even if account setup fails, redirect to login page
           setTimeout(() => {
             router.push("/login");
-          }, 2000);
+          }, 3000);
         }
-      } catch (accountError) {
-        console.error("Error creating account:", accountError);
-        toast.error(`Account created but setup failed: ${(accountError as Error).message}`);
-
-        // Even if account setup fails, redirect to login page
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
       }
     } catch (error) {
       console.error("Error during signup:", error);
@@ -258,6 +275,13 @@ Need help? Contact your gym staff for assistance.
               <li>• Log in with your email and password</li>
               <li>• Start booking classes!</li>
             </ul>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-blue-800 text-sm">
+              <strong>Note:</strong> You are not logged into this web platform. This is for staff members only. 
+              Use the mobile app to access your gym membership and book classes.
+            </p>
           </div>
           
           <div className="space-y-3">
