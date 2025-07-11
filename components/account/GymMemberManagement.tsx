@@ -111,6 +111,7 @@ export default function GymMemberManagement() {
   const [businessId, setBusinessId] = useState<string | null>(null)
   const [businessName, setBusinessName] = useState<string>("")
   const [sendInviteEmail, setSendInviteEmail] = useState(true)
+  const [validatingEmail, setValidatingEmail] = useState(false)
   
   // Pagination state
   const [pagination, setPagination] = useState<PaginationInfo>({
@@ -379,6 +380,46 @@ export default function GymMemberManagement() {
     setIsModalOpen(true)
   }
 
+  const checkIfEmailExistsAsStaff = async (email: string): Promise<boolean> => {
+    if (!businessId) return false;
+    
+    try {
+      const businessRef = doc(db, "businesses", businessId);
+      const businessDoc = await getDoc(businessRef);
+      
+      if (!businessDoc.exists()) {
+        return false;
+      }
+      
+      const businessData = businessDoc.data();
+      const staffMembers = businessData.staffMembers || [];
+      
+      return staffMembers.some((member: any) => member.email === email);
+    } catch (error) {
+      console.error("Error checking staff members:", error);
+      return false;
+    }
+  };
+
+  const checkIfEmailExistsAsCustomer = async (email: string): Promise<boolean> => {
+    if (!businessId) return false;
+    
+    try {
+      const membersRef = collection(db, "gymMembers");
+      const q = query(
+        membersRef, 
+        where("businessId", "==", businessId),
+        where("email", "==", email)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      return !querySnapshot.empty;
+    } catch (error) {
+      console.error("Error checking existing customers:", error);
+      return false;
+    }
+  };
+
   const handleSaveMember = async () => {
     if (!businessId || !formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
       toast.error("Please fill in all required fields")
@@ -413,6 +454,36 @@ export default function GymMemberManagement() {
     setLoading(true)
 
     try {
+      // Check if email already exists as a staff member or customer 
+      // (for new customers, or if editing and email was changed)
+      if (!editingMember || (editingMember && editingMember.email !== formData.email)) {
+        setValidatingEmail(true);
+        
+        const isStaffMember = await checkIfEmailExistsAsStaff(formData.email);
+        if (isStaffMember) {
+          setValidatingEmail(false);
+          toast.error(
+            "⚠️ This email belongs to a staff member. Staff members cannot be added as customers. " +
+            "Please use a different email address for customer accounts.",
+            { duration: 6000 }
+          );
+          return;
+        }
+
+        // Check if email already exists as a customer
+        const isExistingCustomer = await checkIfEmailExistsAsCustomer(formData.email);
+        if (isExistingCustomer) {
+          setValidatingEmail(false);
+          toast.error(
+            "⚠️ A customer with this email already exists. Please use a different email address.",
+            { duration: 4000 }
+          );
+          return;
+        }
+        
+        setValidatingEmail(false);
+      }
+
       const memberData = {
         ...formData,
         businessId,
@@ -456,6 +527,7 @@ export default function GymMemberManagement() {
       toast.error("Failed to save member")
     } finally {
       setLoading(false)
+      setValidatingEmail(false)
     }
   }
 
@@ -897,13 +969,24 @@ export default function GymMemberManagement() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="john@example.com"
-                />
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="john@example.com"
+                    className={validatingEmail ? "pr-10" : ""}
+                  />
+                  {validatingEmail && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-600">
+                  We'll check if this email is already used by a staff member or customer
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
@@ -1069,8 +1152,8 @@ export default function GymMemberManagement() {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveMember} disabled={loading} className="bg-green-600 hover:bg-green-700">
-              {loading ? "Saving..." : editingMember ? "Update Customer" : "Add Customer"}
+            <Button onClick={handleSaveMember} disabled={loading || validatingEmail} className="bg-green-600 hover:bg-green-700">
+              {validatingEmail ? "Checking email..." : loading ? "Saving..." : editingMember ? "Update Customer" : "Add Customer"}
             </Button>
           </DialogFooter>
         </DialogContent>
