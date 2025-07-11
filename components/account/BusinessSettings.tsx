@@ -141,22 +141,20 @@ export default function BusinessSettings() {
   // Real-time listener for staff account status
   useEffect(() => {
     if (staffMembers.length === 0) return;
-    // Clean up previous listener
     if (staffListenerUnsubscribe.current) {
       staffListenerUnsubscribe.current();
       staffListenerUnsubscribe.current = null;
     }
-    // Listen for changes to user accounts for all staff emails
-    const staffEmails = staffMembers.map((m) => m.email);
+    // Normalize emails to lowercase
+    const staffEmails = staffMembers.map((m) => (m.email || "").trim().toLowerCase());
     if (staffEmails.length === 0) return;
     const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "in", staffEmails.slice(0, 10)));
-    // Firestore 'in' queries are limited to 10 items, so chunk if needed
     let unsubscribes: (() => void)[] = [];
     const updateStaffFromSnapshot = (docs: any[]) => {
       setStaffMembers((prev) =>
         prev.map((member) => {
-          const userDoc = docs.find((d) => d.email === member.email);
+          const memberEmail = (member.email || "").trim().toLowerCase();
+          const userDoc = docs.find((d) => ((d.email || "").trim().toLowerCase() === memberEmail));
           if (userDoc) {
             return {
               ...member,
@@ -190,7 +188,7 @@ export default function BusinessSettings() {
     return () => {
       if (staffListenerUnsubscribe.current) staffListenerUnsubscribe.current();
     };
-  }, [staffMembers.map((m) => m.email).join(",")]);
+  }, [staffMembers.map((m) => (m.email || "").trim().toLowerCase()).join(",")]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
