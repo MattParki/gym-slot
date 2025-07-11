@@ -3,6 +3,88 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { UserProfile } from "@/models/UserProfile";
 
 /**
+ * Helper function to get all business IDs for a user (handles both old and new format)
+ * @param profile - The user's profile
+ * @returns Array of business IDs
+ */
+export function getUserBusinessIds(profile: UserProfile | null): string[] {
+  if (!profile) return [];
+  
+  // If new businessIds array exists, use it
+  if (profile.businessIds && profile.businessIds.length > 0) {
+    return profile.businessIds;
+  }
+  
+  // Fall back to old single businessId for backwards compatibility
+  if (profile.businessId) {
+    return [profile.businessId];
+  }
+  
+  return [];
+}
+
+/**
+ * Helper function to add a business ID to a user's profile
+ * @param userId - The user's UID
+ * @param businessId - The business ID to add
+ */
+export async function addUserToBusinessId(userId: string, businessId: string): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data() as UserProfile;
+      const currentBusinessIds = getUserBusinessIds(userData);
+      
+      // Only add if not already present
+      if (!currentBusinessIds.includes(businessId)) {
+        const updatedBusinessIds = [...currentBusinessIds, businessId];
+        await updateDoc(userRef, {
+          businessIds: updatedBusinessIds,
+          updatedAt: new Date().toISOString(),
+        });
+        console.log(`✅ Added business ${businessId} to user ${userId}. Total businesses: ${updatedBusinessIds.length}`);
+      } else {
+        console.log(`⚠️ User ${userId} already belongs to business ${businessId}`);
+      }
+    } else {
+      console.log(`⚠️ User ${userId} profile not found when trying to add business ${businessId}`);
+    }
+  } catch (error) {
+    console.error(`Error adding user ${userId} to business ${businessId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Helper function to remove a business ID from a user's profile
+ * @param userId - The user's UID
+ * @param businessId - The business ID to remove
+ */
+export async function removeUserFromBusinessId(userId: string, businessId: string): Promise<void> {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const userData = userSnap.data() as UserProfile;
+      const currentBusinessIds = getUserBusinessIds(userData);
+      
+      const updatedBusinessIds = currentBusinessIds.filter(id => id !== businessId);
+      await updateDoc(userRef, {
+        businessIds: updatedBusinessIds,
+        updatedAt: new Date().toISOString(),
+      });
+      console.log(`✅ Removed business ${businessId} from user ${userId}. Total businesses: ${updatedBusinessIds.length}`);
+    }
+  } catch (error) {
+    console.error(`Error removing user ${userId} from business ${businessId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Get user profile from Firestore
  * @param userId - The user's UID
  * @returns The user's profile data or null if not found

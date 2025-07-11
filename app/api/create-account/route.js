@@ -204,11 +204,27 @@ export async function POST(req) {
           console.log(`Creating user profile for ${email} with role: ${userRole}`);
           if (userProfileDoc.exists) {
             console.log(`Updating existing user profile for ${email}`);
+            
+            // Get existing profile data to handle multiple businesses
+            const existingData = userProfileDoc.data();
+            const existingBusinessIds = existingData.businessIds || [];
+            
+            // Add new businessId if not already present
+            let updatedBusinessIds = [...existingBusinessIds];
+            if (!updatedBusinessIds.includes(businessId)) {
+              updatedBusinessIds.push(businessId);
+              console.log(`➕ Adding business ${businessId} to user ${email}. Total businesses: ${updatedBusinessIds.length}`);
+            } else {
+              console.log(`⚠️ User ${email} already has business ${businessId} in their profile`);
+            }
+            
             batch.update(userProfileRef, {
               email: email,
               updatedAt: now,
-              businessId: businessId,
+              businessIds: updatedBusinessIds,
               role: userRole,
+              // Keep backwards compatibility
+              businessId: businessId,
             });
           } else {
             console.log(`Creating new user profile for ${email}`);
@@ -216,7 +232,7 @@ export async function POST(req) {
               email: email,
               createdAt: now,
               updatedAt: now,
-              businessId: businessId,
+              businessIds: [businessId], // Initialize with array containing this business
               role: userRole,
               displayName: email.split('@')[0],
               onboardingCompleted: false,
@@ -230,6 +246,8 @@ export async function POST(req) {
               certifications: [],
               // Profile completion status
               profileCompleted: false,
+              // Keep backwards compatibility
+              businessId: businessId,
             });
           }
           console.log(`✅ User profile setup completed for ${email}`);
@@ -262,21 +280,36 @@ export async function POST(req) {
           // Create user profile as owner
           console.log("Creating user profile as owner...");
           if (userProfileDoc.exists) {
+            // Get existing profile data to handle multiple businesses
+            const existingData = userProfileDoc.data();
+            const existingBusinessIds = existingData.businessIds || [];
+            
+            // Add new businessId if not already present
+            let updatedBusinessIds = [...existingBusinessIds];
+            if (!updatedBusinessIds.includes(newBusinessId)) {
+              updatedBusinessIds.push(newBusinessId);
+              console.log(`➕ Adding owned business ${newBusinessId} to user ${email}. Total businesses: ${updatedBusinessIds.length}`);
+            }
+            
             batch.update(userProfileRef, {
               email: email,
               updatedAt: now,
-              businessId: newBusinessId,
+              businessIds: updatedBusinessIds,
               role: 'owner',
+              // Keep backwards compatibility
+              businessId: newBusinessId,
             });
           } else {
             batch.set(userProfileRef, {
               email: email,
               createdAt: now,
               updatedAt: now,
-              businessId: newBusinessId,
+              businessIds: [newBusinessId], // Initialize with array containing this business
               role: 'owner',
               displayName: email.split('@')[0],
               onboardingCompleted: false,
+              // Keep backwards compatibility
+              businessId: newBusinessId,
             });
           }
         }

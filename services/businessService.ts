@@ -9,7 +9,7 @@ import {
   getDocs,
   serverTimestamp
 } from "firebase/firestore";
-
+import { getUserProfile, getUserBusinessIds } from "./userService";
 
 export interface Business {
   id: string;
@@ -46,35 +46,107 @@ export interface SubscriptionInfo {
   productName: string;
 }
 
+/**
+ * Get all businesses a user has access to (as owner or staff member)
+ * @param userId - The user's UID
+ * @returns Array of businesses the user has access to
+ */
+export async function getUserBusinesses(userId: string): Promise<Business[]> {
+  try {
+    const businesses: Business[] = [];
+    
+    // Get user profile to check their business IDs
+    const userProfile = await getUserProfile(userId);
+    const userBusinessIds = getUserBusinessIds(userProfile);
+    
+    console.log(`Getting businesses for user ${userId}. BusinessIds from profile: ${userBusinessIds.join(', ')}`);
+    
+    // Get businesses where user is owner
+    const ownerQuery = query(collection(db, "businesses"), where("owners", "array-contains", userId));
+    const ownerSnapshot = await getDocs(ownerQuery);
+    
+    ownerSnapshot.forEach((doc) => {
+      const businessData = doc.data();
+      const business: Business = {
+        id: doc.id,
+        companyName: businessData.companyName || "",
+        contactInfo: businessData.contactInfo || "",
+        email: businessData.email || "",
+        owners: businessData.owners || [],
+        members: businessData.members || [],
+        staffMembers: businessData.staffMembers || [],
+        companySize: businessData.companySize || "",
+        createdAt: businessData.createdAt?.toDate?.()
+          ? businessData.createdAt.toDate().toISOString()
+          : new Date().toISOString(),
+        subscriptionInfo: businessData.subscriptionInfo || undefined,
+      };
+      businesses.push(business);
+      console.log(`✅ Found business where user is owner: ${business.companyName || business.id}`);
+    });
+    
+    // Get additional businesses from user's businessIds that aren't already included
+    for (const businessId of userBusinessIds) {
+      if (!businesses.find(b => b.id === businessId)) {
+        try {
+          const businessDoc = await getDoc(doc(db, "businesses", businessId));
+          if (businessDoc.exists()) {
+            const businessData = businessDoc.data();
+            const business: Business = {
+              id: businessDoc.id,
+              companyName: businessData.companyName || "",
+              contactInfo: businessData.contactInfo || "",
+              email: businessData.email || "",
+              owners: businessData.owners || [],
+              members: businessData.members || [],
+              staffMembers: businessData.staffMembers || [],
+              companySize: businessData.companySize || "",
+              createdAt: businessData.createdAt?.toDate?.()
+                ? businessData.createdAt.toDate().toISOString()
+                : new Date().toISOString(),
+              subscriptionInfo: businessData.subscriptionInfo || undefined,
+            };
+            businesses.push(business);
+            console.log(`✅ Found additional business from profile: ${business.companyName || business.id}`);
+          }
+        } catch (error) {
+          console.error(`Error fetching business ${businessId}:`, error);
+        }
+      }
+    }
+    
+    console.log(`User ${userId} has access to ${businesses.length} businesses`);
+    return businesses;
+  } catch (error) {
+    console.error("Error getting user businesses:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get the primary business for a user (for backwards compatibility)
+ * Returns the first business where the user is an owner, or the first business in their list
+ * @param userId - The user's UID
+ * @returns The primary business or null if none found
+ */
 export async function getBusiness(userId: string): Promise<Business | null> {
   try {
-    const businessesRef = collection(db, "businesses");
-    const q = query(businessesRef, where("owners", "array-contains", userId));
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
+    const businesses = await getUserBusinesses(userId);
+    
+    if (businesses.length === 0) {
       return null;
     }
-
-    const businessDoc = querySnapshot.docs[0];
-    const businessData = businessDoc.data();
-
-    return {
-      id: businessDoc.id,
-      companyName: businessData.companyName || "",
-      contactInfo: businessData.contactInfo || "",
-      email: businessData.email || "",
-      owners: businessData.owners || [],
-      members: businessData.members || [],
-      staffMembers: businessData.staffMembers || [],
-      companySize: businessData.companySize || "",
-      createdAt: businessData.createdAt?.toDate?.()
-        ? businessData.createdAt.toDate().toISOString()
-        : new Date().toISOString(),
-      subscriptionInfo: businessData.subscriptionInfo || undefined,
-    };
+    
+    // Prefer businesses where user is owner
+    const ownedBusiness = businesses.find(business => business.owners.includes(userId));
+    if (ownedBusiness) {
+      return ownedBusiness;
+    }
+    
+    // Otherwise return the first business
+    return businesses[0];
   } catch (error) {
-    console.error("Error getting business:", error);
+    console.error("Error getting primary business:", error);
     throw error;
   }
 }

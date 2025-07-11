@@ -12,7 +12,8 @@ export interface UserProfile {
   role: string;
   industry?: string;
   companySize?: string;
-  businessId?: string;
+  businessId?: string; // Deprecated - kept for backwards compatibility
+  businessIds?: string[]; // New field to support multiple businesses
   onboardingCompleted?: boolean;
   profileCompleted?: boolean;
   createdAt?: string;

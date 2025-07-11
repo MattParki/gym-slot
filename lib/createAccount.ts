@@ -130,25 +130,59 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
 
       // ALWAYS create user profile (regardless of business array existence)
       console.log(`🔄 Fallback: Creating user profile for ${email} with role: ${userRole}`);
-      await setDoc(doc(db, "users", uid), {
-        email: email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        businessId: businessId, 
-        role: userRole,  
-        displayName: displayName,
-        onboardingCompleted: false,
-        // Additional fields for staff members to fill out
-        firstName: "",
-        lastName: "",
-        phone: "",
-        profilePicture: "",
-        bio: "",
-        specialties: [],
-        certifications: [],
-        // Profile completion status
-        profileCompleted: false,
-      });
+      
+      // Check if user profile already exists
+      const userRef = doc(db, "users", uid);
+      const existingUserDoc = await getDoc(userRef);
+      
+      if (existingUserDoc.exists()) {
+        console.log(`📝 Fallback: Updating existing user profile for ${email}`);
+        
+        // Get existing profile data to handle multiple businesses
+        const existingData = existingUserDoc.data();
+        const existingBusinessIds = existingData.businessIds || [];
+        
+        // Add new businessId if not already present
+        let updatedBusinessIds = [...existingBusinessIds];
+        if (!updatedBusinessIds.includes(businessId)) {
+          updatedBusinessIds.push(businessId);
+          console.log(`➕ Fallback: Adding business ${businessId} to user ${email}. Total businesses: ${updatedBusinessIds.length}`);
+        } else {
+          console.log(`⚠️ Fallback: User ${email} already has business ${businessId} in their profile`);
+        }
+        
+        await updateDoc(userRef, {
+          email: email,
+          updatedAt: serverTimestamp(),
+          businessIds: updatedBusinessIds,
+          role: userRole,
+          // Keep backwards compatibility
+          businessId: businessId,
+        });
+      } else {
+        console.log(`🆕 Fallback: Creating new user profile for ${email}`);
+        await setDoc(userRef, {
+          email: email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          businessIds: [businessId], // Initialize with array containing this business
+          role: userRole,  
+          displayName: displayName,
+          onboardingCompleted: false,
+          // Additional fields for staff members to fill out
+          firstName: "",
+          lastName: "",
+          phone: "",
+          profilePicture: "",
+          bio: "",
+          specialties: [],
+          certifications: [],
+          // Profile completion status
+          profileCompleted: false,
+          // Keep backwards compatibility
+          businessId: businessId,
+        });
+      }
       console.log(`✅ Fallback: User profile created for ${email}`);
     } else {
       // Create new business (demo account)
@@ -165,25 +199,56 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
         },
       });
 
-      await setDoc(doc(db, "users", uid), {
-        email: email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        businessId: uid, 
-        role: 'owner',  
-        displayName: displayName,
-        onboardingCompleted: false,
-        // Additional fields for profile completion
-        firstName: "",
-        lastName: "",
-        phone: "",
-        profilePicture: "",
-        bio: "",
-        specialties: [],
-        certifications: [],
-        // Profile completion status
-        profileCompleted: false,
-      });
+      // Check if user profile already exists for business owner
+      const userRef = doc(db, "users", uid);
+      const existingUserDoc = await getDoc(userRef);
+      
+      if (existingUserDoc.exists()) {
+        console.log(`📝 Fallback: Updating existing user profile for business owner ${email}`);
+        
+        // Get existing profile data to handle multiple businesses
+        const existingData = existingUserDoc.data();
+        const existingBusinessIds = existingData.businessIds || [];
+        
+        // Add new businessId if not already present
+        let updatedBusinessIds = [...existingBusinessIds];
+        if (!updatedBusinessIds.includes(uid)) {
+          updatedBusinessIds.push(uid);
+          console.log(`➕ Fallback: Adding owned business ${uid} to user ${email}. Total businesses: ${updatedBusinessIds.length}`);
+        }
+        
+        await updateDoc(userRef, {
+          email: email,
+          updatedAt: serverTimestamp(),
+          businessIds: updatedBusinessIds,
+          role: 'owner',
+          // Keep backwards compatibility
+          businessId: uid,
+        });
+      } else {
+        console.log(`🆕 Fallback: Creating new user profile for business owner ${email}`);
+        await setDoc(userRef, {
+          email: email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          businessIds: [uid], // Initialize with array containing this business
+          role: 'owner',  
+          displayName: displayName,
+          onboardingCompleted: false,
+          // Additional fields for profile completion
+          firstName: "",
+          lastName: "",
+          phone: "",
+          profilePicture: "",
+          bio: "",
+          specialties: [],
+          certifications: [],
+          // Profile completion status
+          profileCompleted: false,
+          // Keep backwards compatibility
+          businessId: uid,
+        });
+      }
     }
 
     return true;
