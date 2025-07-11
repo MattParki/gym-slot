@@ -99,37 +99,36 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
       const existsInStaff = existingStaff.some((member: any) => member.email === email);
       const existsInMembers = existingMembers.some((member: any) => member.email === email);
 
-      if (existsInStaff || existsInMembers) {
-        console.log(`⚠️ Fallback: User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
-        return true; // Consider it successful since user already exists
-      }
-      
-      // Add user to appropriate array based on role
-      if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
-        // Add as staff member
-        console.log(`➕ Fallback: Adding ${email} as staff member with role: ${userRole}`);
-        await updateDoc(businessRef, {
-          staffMembers: arrayUnion({
-            id: uid,
-            email: email,
-            role: userRole
-          }),
-          updatedAt: serverTimestamp()
-        });
+      // Add user to appropriate array based on role (only if they don't already exist)
+      if (!existsInStaff && !existsInMembers) {
+        if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
+          // Add as staff member
+          console.log(`➕ Fallback: Adding ${email} as staff member with role: ${userRole}`);
+          await updateDoc(businessRef, {
+            staffMembers: arrayUnion({
+              id: uid,
+              email: email,
+              role: userRole
+            }),
+            updatedAt: serverTimestamp()
+          });
+        } else {
+          // Add as gym customer
+          console.log(`➕ Fallback: Adding ${email} as gym customer`);
+          await updateDoc(businessRef, {
+            members: arrayUnion({
+              id: uid,
+              email: email,
+              role: "customer"
+            }),
+            updatedAt: serverTimestamp()
+          });
+        }
       } else {
-        // Add as gym customer
-        console.log(`➕ Fallback: Adding ${email} as gym customer`);
-        await updateDoc(businessRef, {
-          members: arrayUnion({
-            id: uid,
-            email: email,
-            role: "customer"
-          }),
-          updatedAt: serverTimestamp()
-        });
+        console.log(`⚠️ Fallback: User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers} - skipping business array update`);
       }
 
-      // Create user profile with correct role
+      // ALWAYS create user profile (regardless of business array existence)
       console.log(`🔄 Fallback: Creating user profile for ${email} with role: ${userRole}`);
       await setDoc(doc(db, "users", uid), {
         email: email,

@@ -167,47 +167,40 @@ export async function POST(req) {
           const existsInStaff = existingStaff.some(member => member.email === email);
           const existsInMembers = existingMembers.some(member => member.email === email);
 
-          if (existsInStaff || existsInMembers) {
-            console.log(`⚠️ User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
-            return NextResponse.json(
-              { 
-                success: true, 
-                message: "User already exists in business",
-                alreadyExists: true 
-              }
-            );
-          }
-
-          // Add user to appropriate array based on role
-          if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
-            // Add as staff member
-            console.log(`➕ Adding ${email} as staff member with role: ${userRole}`);
-            batch.update(businessRef, {
-              staffMembers: adminDb.FieldValue.arrayUnion({
-                id: uid,
-                email: email,
-                role: userRole,
-                joinedAt: now.toISOString(),
-                status: "active"
-              }),
-              updatedAt: now
-            });
+          // Add user to appropriate array based on role (only if they don't already exist)
+          if (!existsInStaff && !existsInMembers) {
+            if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
+              // Add as staff member
+              console.log(`➕ Adding ${email} as staff member with role: ${userRole}`);
+              batch.update(businessRef, {
+                staffMembers: adminDb.FieldValue.arrayUnion({
+                  id: uid,
+                  email: email,
+                  role: userRole,
+                  joinedAt: now.toISOString(),
+                  status: "active"
+                }),
+                updatedAt: now
+              });
+            } else {
+              // Add as gym customer/member
+              console.log(`➕ Adding ${email} as gym customer`);
+              batch.update(businessRef, {
+                members: adminDb.FieldValue.arrayUnion({
+                  id: uid,
+                  email: email,
+                  role: "customer",
+                  joinedAt: now.toISOString(),
+                  status: "active"
+                }),
+                updatedAt: now
+              });
+            }
           } else {
-            // Add as gym customer/member
-            console.log(`➕ Adding ${email} as gym customer`);
-            batch.update(businessRef, {
-              members: adminDb.FieldValue.arrayUnion({
-                id: uid,
-                email: email,
-                role: "customer",
-                joinedAt: now.toISOString(),
-                status: "active"
-              }),
-              updatedAt: now
-            });
+            console.log(`⚠️ User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers} - skipping business array update`);
           }
 
-          // Create user profile with correct role
+          // ALWAYS create user profile (regardless of business array existence)
           console.log(`Creating user profile for ${email} with role: ${userRole}`);
           if (userProfileDoc.exists) {
             console.log(`Updating existing user profile for ${email}`);
