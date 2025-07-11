@@ -164,7 +164,7 @@ export default function UserProfileSettings() {
         <p className="text-sm text-gray-700 mt-1">
           {isBusinessOwner 
             ? "You have full access to update your profile and business settings."
-            : "You can update your personal profile information. Contact your business administrator for role changes."
+            : "You can update your personal profile information. Changes will be synced with your business staff records. Contact your business administrator for role changes."
           }
         </p>
       </div>

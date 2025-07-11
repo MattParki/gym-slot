@@ -23,7 +23,7 @@ import {
   BusinessMember,
   AddMemberResult
 } from "@/services/businessService";
-import { getUserProfile } from "@/services/userService";
+import { getUserProfile, updateUserProfile } from "@/services/userService";
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
 import CategoryManagement from "./CategoryManagement";
@@ -246,8 +246,39 @@ export default function BusinessSettings() {
 
     try {
       setUpdatingMember(true);
-      // Use email to find and update the staff member
+      
+      // Update the business staff member record
       await updateBusinessStaffMember(businessId, editingMember.email, editFormData);
+
+      // If the staff member has a user account, also update their user profile
+      if (editFormData.hasUserAccount) {
+        try {
+          // Find the user document by email to get their UID
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("email", "==", editingMember.email));
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const userId = userDoc.id;
+            
+            // Update the user's profile with the same data
+            const userProfileUpdates = {
+              firstName: editFormData.firstName,
+              lastName: editFormData.lastName,
+              phone: editFormData.phone,
+              role: editFormData.role,
+            };
+            
+            await updateUserProfile(userId, userProfileUpdates);
+            console.log(`✅ Updated user profile for ${editingMember.email}`);
+          }
+        } catch (error) {
+          console.error("Error updating user profile:", error);
+          // Don't fail the whole operation if user profile update fails
+          toast.error("Staff member updated, but failed to sync user profile. The staff member may need to refresh their profile.");
+        }
+      }
 
       // Update local state by email
       setStaffMembers(staffMembers.map(member => 
@@ -897,7 +928,7 @@ export default function BusinessSettings() {
                 </div>
                 <div className="text-xs text-gray-600 mt-1">
                   {editFormData.userAccountStatus === "created" && 
-                    "This staff member has created their account and can log in. Profile data is loaded from their account."
+                    "This staff member has created their account and can log in. Profile data is loaded from their account. Changes made here will be synced to their profile."
                   }
                   {editFormData.userAccountStatus === "not_created" && 
                     "This staff member hasn't created their account yet. Send them an invitation email to sign up."

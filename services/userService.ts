@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { UserProfile } from "@/models/UserProfile";
 
 /**
@@ -152,11 +152,70 @@ export async function hasCompletedOnboarding(userId: string): Promise<boolean> {
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<void> {
   try {
     const userRef = doc(db, "users", userId);
+    
+    // Update the user's profile document
     await updateDoc(userRef, {
       ...data,
       updatedAt: new Date().toISOString()
     });
+
+    // If profile data includes basic info (firstName, lastName, phone), also update business staff records
+    if (data.firstName !== undefined || data.lastName !== undefined || data.phone !== undefined || data.role !== undefined) {
+      try {
+        // Get the user's email to find their staff records
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userEmail = userData.email;
+          
+          if (userEmail) {
+            // Find all businesses where this user is a staff member
+            const businessesRef = collection(db, "businesses");
+            const businessesSnapshot = await getDocs(businessesRef);
+            
+            const updatePromises: Promise<void>[] = [];
+            
+            for (const businessDoc of businessesSnapshot.docs) {
+              const businessData = businessDoc.data();
+              const staffMembers = businessData.staffMembers || [];
+              
+              // Check if this user is in the staff members array
+              const staffMemberIndex = staffMembers.findIndex((member: any) => member.email === userEmail);
+              
+              if (staffMemberIndex !== -1) {
+                // Update the staff member's data in this business
+                const updatedStaffMembers = [...staffMembers];
+                updatedStaffMembers[staffMemberIndex] = {
+                  ...updatedStaffMembers[staffMemberIndex],
+                  ...(data.firstName !== undefined && { firstName: data.firstName }),
+                  ...(data.lastName !== undefined && { lastName: data.lastName }),
+                  ...(data.phone !== undefined && { phone: data.phone }),
+                  ...(data.role !== undefined && { role: data.role }),
+                };
+                
+                // Update the business document
+                const businessRef = doc(db, "businesses", businessDoc.id);
+                updatePromises.push(
+                  updateDoc(businessRef, {
+                    staffMembers: updatedStaffMembers,
+                    updatedAt: new Date()
+                  })
+                );
+              }
+            }
+            
+            // Execute all business updates
+            await Promise.all(updatePromises);
+            console.log(`✅ Synced profile updates to ${updatePromises.length} business(es) for ${userEmail}`);
+          }
+        }
+      } catch (error) {
+        console.error("Error syncing profile updates to business records:", error);
+        // Don't fail the user profile update if business sync fails
+      }
+    }
   } catch (error) {
+    console.error("Error updating user profile:", error);
     throw error;
   }
 }
