@@ -673,11 +673,6 @@ export default function BusinessSettings() {
                                     🏢 {member.department}
                                   </div>
                                 )}
-                                {member.hasAccount && (
-                                  <div className="text-xs text-green-600">
-                                    ✓ Profile data from user account
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </div>
