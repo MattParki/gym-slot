@@ -29,6 +29,7 @@ import toast from 'react-hot-toast';
 import CategoryManagement from "./CategoryManagement";
 import GymMemberManagement from "./GymMemberManagement";
 import LoadingScreen from "@/components/LoadingScreen";
+import PasswordResetModal from "./PasswordResetModal";
 
 // BusinessMember interface is now imported from businessService
 
@@ -56,7 +57,6 @@ export default function BusinessSettings() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<BusinessMember | null>(null);
   const [updatingMember, setUpdatingMember] = useState(false);
-  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const [editFormData, setEditFormData] = useState({
     firstName: "",
     lastName: "",
@@ -78,6 +78,10 @@ export default function BusinessSettings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  
+  // Password reset modal state
+  const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false);
+  const [passwordResetMember, setPasswordResetMember] = useState<BusinessMember | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -296,55 +300,9 @@ export default function BusinessSettings() {
     }
   };
 
-  const handlePasswordReset = async (email: string) => {
-    try {
-      setSendingPasswordReset(true);
-      const result = await sendPasswordResetEmail(email);
-      
-      if (result.devMode && result.resetLink) {
-        // Development mode - show the reset link
-        toast.success(
-          <div>
-            <p>Development Mode: Password reset link generated!</p>
-            <p className="text-xs mt-2">
-              <a 
-                href={result.resetLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 underline break-all"
-              >
-                Click here to reset password
-              </a>
-            </p>
-          </div>,
-          { duration: 10000 }
-        );
-      } else {
-        toast.success(`Password reset email sent to ${email}`);
-      }
-    } catch (error) {
-      console.error("Error sending password reset:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
-      
-      // Check if it's a user-not-found error
-      if (errorMessage.includes("complete account setup") || errorMessage.includes("User not found")) {
-        toast.error(
-          "This staff member hasn't completed their account setup yet. " +
-          "Consider re-sending their invitation email instead.",
-          { duration: 6000 }
-        );
-      } else if (errorMessage.includes("email")) {
-        toast.error(
-          "Email service is not configured. Please contact your system administrator.",
-          { duration: 6000 }
-        );
-      } else {
-        toast.error(errorMessage);
-      }
-    } finally {
-      setSendingPasswordReset(false);
-    }
+  const handlePasswordReset = (member: BusinessMember) => {
+    setPasswordResetMember(member);
+    setIsPasswordResetModalOpen(true);
   };
 
   const handleAddMember = async () => {
@@ -693,16 +651,12 @@ export default function BusinessSettings() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handlePasswordReset(member.email)}
-                            disabled={loading || addingMember || sendingPasswordReset}
+                            onClick={() => handlePasswordReset(member)}
+                            disabled={loading || addingMember}
                             className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 w-8 p-0"
                             title="Send password reset email"
                           >
-                            {sendingPasswordReset ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Key className="h-4 w-4" />
-                            )}
+                            <Key className="h-4 w-4" />
                           </Button>
                           <Button
                             type="button"
@@ -1017,21 +971,11 @@ export default function BusinessSettings() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePasswordReset(editingMember.email)}
-                  disabled={sendingPasswordReset}
+                  onClick={() => editingMember && handlePasswordReset(editingMember)}
                   className="border-blue-300 text-blue-700 hover:bg-blue-100"
                 >
-                  {sendingPasswordReset ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Key className="h-3 w-3 mr-1" />
-                      Send Reset Email
-                    </>
-                  )}
+                  <Key className="h-3 w-3 mr-1" />
+                  Send Reset Email
                 </Button>
               </div>
             </div>
@@ -1104,6 +1048,18 @@ export default function BusinessSettings() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={isPasswordResetModalOpen}
+        onClose={() => setIsPasswordResetModalOpen(false)}
+        userEmail={passwordResetMember?.email || ""}
+        userName={passwordResetMember?.firstName && passwordResetMember?.lastName ? 
+          `${passwordResetMember.firstName} ${passwordResetMember.lastName}` : 
+          passwordResetMember?.email?.split('@')[0]}
+        userRole={passwordResetMember?.role}
+        userType="staff"
+      />
     </div>
   );
 }

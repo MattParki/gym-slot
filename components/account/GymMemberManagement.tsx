@@ -50,6 +50,7 @@ import { db } from "@/lib/firebase"
 import toast from "react-hot-toast"
 import { format } from "date-fns"
 import { getBusiness, sendPasswordResetEmail } from "@/services/businessService"
+import PasswordResetModal from "./PasswordResetModal"
 
 interface GymMember {
   id: string
@@ -126,8 +127,9 @@ export default function GymMemberManagement() {
   const [statusUpdateMember, setStatusUpdateMember] = useState<GymMember | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<typeof membershipStatuses[number]>("Active")
   
-  // Password reset state
-  const [sendingPasswordReset, setSendingPasswordReset] = useState(false)
+  // Password reset modal state
+  const [isPasswordResetModalOpen, setIsPasswordResetModalOpen] = useState(false)
+  const [passwordResetMember, setPasswordResetMember] = useState<GymMember | null>(null)
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -475,55 +477,9 @@ export default function GymMemberManagement() {
     setIsStatusModalOpen(true)
   }
 
-  const handlePasswordReset = async (email: string) => {
-    try {
-      setSendingPasswordReset(true);
-      const result = await sendPasswordResetEmail(email);
-      
-      if (result.devMode && result.resetLink) {
-        // Development mode - show the reset link
-        toast.success(
-          <div>
-            <p>Development Mode: Password reset link generated!</p>
-            <p className="text-xs mt-2">
-              <a 
-                href={result.resetLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 underline break-all"
-              >
-                Click here to reset password
-              </a>
-            </p>
-          </div>,
-          { duration: 10000 }
-        );
-      } else {
-        toast.success(`Password reset email sent to ${email}`);
-      }
-    } catch (error) {
-      console.error("Error sending password reset:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
-      
-      // Check if it's a user-not-found error
-      if (errorMessage.includes("complete account setup") || errorMessage.includes("User not found")) {
-        toast.error(
-          "This customer hasn't completed their account setup yet. " +
-          "They may need to create an account first or use a different email.",
-          { duration: 6000 }
-        );
-      } else if (errorMessage.includes("email")) {
-        toast.error(
-          "Email service is not configured. Please contact your system administrator.",
-          { duration: 6000 }
-        );
-      } else {
-        toast.error(errorMessage);
-      }
-    } finally {
-      setSendingPasswordReset(false);
-    }
+  const handlePasswordReset = (member: GymMember) => {
+    setPasswordResetMember(member);
+    setIsPasswordResetModalOpen(true);
   };
 
   const updateMemberStatus = async () => {
@@ -824,16 +780,11 @@ export default function GymMemberManagement() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handlePasswordReset(member.email)}
-                          disabled={sendingPasswordReset}
+                          onClick={() => handlePasswordReset(member)}
                           className="text-green-600 hover:text-green-700 h-8 w-8 p-0"
                           title="Send password reset email"
                         >
-                          {sendingPasswordReset ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Key className="h-4 w-4" />
-                          )}
+                          <Key className="h-4 w-4" />
                         </Button>
                         
                         <AlertDialog>
@@ -1167,6 +1118,18 @@ export default function GymMemberManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Password Reset Modal */}
+      <PasswordResetModal
+        isOpen={isPasswordResetModalOpen}
+        onClose={() => setIsPasswordResetModalOpen(false)}
+        userEmail={passwordResetMember?.email || ""}
+        userName={passwordResetMember?.firstName && passwordResetMember?.lastName ? 
+          `${passwordResetMember.firstName} ${passwordResetMember.lastName}` : 
+          passwordResetMember?.email?.split('@')[0]}
+        userRole={passwordResetMember?.membershipPlan}
+        userType="customer"
+      />
     </div>
   )
 } 
