@@ -5,10 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Users, UserCheck, Building, FolderOpen, Loader2, Edit2, Key } from "lucide-react";
+import { Plus, X, Users, UserCheck, Building, FolderOpen, Loader2, Edit2, Key, UserX } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import {
   getBusiness,
   updateBusiness,
@@ -21,6 +23,7 @@ import {
   BusinessMember,
   AddMemberResult
 } from "@/services/businessService";
+import { getUserProfile } from "@/services/userService";
 import { MobileTooltip } from "@/components/MobileTooltip";
 import toast from 'react-hot-toast';
 import CategoryManagement from "./CategoryManagement";
@@ -59,7 +62,9 @@ export default function BusinessSettings() {
     lastName: "",
     phone: "",
     department: "",
-    role: "staff"
+    role: "staff",
+    hasUserAccount: false,
+    userAccountStatus: "" // "created" | "not_created" | "checking"
   });
   // Company Info section
   const [companyName, setCompanyName] = useState("");
@@ -82,7 +87,42 @@ export default function BusinessSettings() {
               setEmailDomain(domain || "");
             }
             setMembers(business.members || []);
-            setStaffMembers(business.staffMembers || []);
+            
+            // Check account status for each staff member
+            const staffWithAccountStatus = await Promise.all(
+              (business.staffMembers || []).map(async (member) => {
+                try {
+                  // Check if user has created an account
+                  const usersRef = collection(db, "users");
+                  const q = query(usersRef, where("email", "==", member.email));
+                  const querySnapshot = await getDocs(q);
+                  
+                  if (!querySnapshot.empty) {
+                    const userData = querySnapshot.docs[0].data();
+                    return {
+                      ...member,
+                      hasAccount: true,
+                      firstName: userData.firstName || member.firstName,
+                      lastName: userData.lastName || member.lastName,
+                      phone: userData.phone || member.phone
+                    };
+                  } else {
+                    return {
+                      ...member,
+                      hasAccount: false
+                    };
+                  }
+                } catch (error) {
+                  console.error(`Error checking account for ${member.email}:`, error);
+                  return {
+                    ...member,
+                    hasAccount: false
+                  };
+                }
+              })
+            );
+            
+            setStaffMembers(staffWithAccountStatus);
             setCompanyName(business.companyName || "");
             setContactInfo(business.contactInfo || "");
           }
@@ -124,16 +164,60 @@ export default function BusinessSettings() {
     return role || { value: roleValue, label: roleValue.charAt(0).toUpperCase() + roleValue.slice(1), description: "Custom role" };
   };
 
-  const handleEditMember = (member: BusinessMember) => {
+  const handleEditMember = async (member: BusinessMember) => {
     setEditingMember(member);
     setEditFormData({
       firstName: member.firstName || "",
       lastName: member.lastName || "",
       phone: member.phone || "",
       department: member.department || "",
-      role: member.role
+      role: member.role,
+      hasUserAccount: false, // Default to false
+      userAccountStatus: "checking" // Start checking
     });
+
     setIsEditModalOpen(true);
+
+    // Check if the user has created their account and load their profile data
+    try {
+      console.log(`Checking for user account: ${member.email}`);
+      
+      // First, try to find user by email in users collection
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", member.email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        
+        console.log(`✅ Found user profile for ${member.email}:`, userData);
+        
+        // Update form with user's profile data
+        setEditFormData(prev => ({
+          ...prev,
+          firstName: userData.firstName || prev.firstName,
+          lastName: userData.lastName || prev.lastName,
+          phone: userData.phone || prev.phone,
+          hasUserAccount: true,
+          userAccountStatus: "created"
+        }));
+      } else {
+        console.log(`⚠️ No user profile found for ${member.email} - user hasn't created account yet`);
+        setEditFormData(prev => ({
+          ...prev,
+          hasUserAccount: false,
+          userAccountStatus: "not_created"
+        }));
+      }
+    } catch (error) {
+      console.error("Error checking user account:", error);
+      setEditFormData(prev => ({
+        ...prev,
+        hasUserAccount: false,
+        userAccountStatus: "error"
+      }));
+    }
   };
 
   const handleUpdateMember = async () => {
@@ -460,6 +544,20 @@ export default function BusinessSettings() {
                                 {member.firstName && member.lastName && (
                                   <span className="text-xs sm:text-sm text-gray-500 truncate">({member.email})</span>
                                 )}
+                                {/* Account status indicator */}
+                                <div className="flex items-center gap-1">
+                                  {member.hasAccount ? (
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                      <span className="text-xs text-green-600 font-medium">Account Active</span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                                      <span className="text-xs text-yellow-600 font-medium">Needs Account</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit">
@@ -468,6 +566,11 @@ export default function BusinessSettings() {
                                 <span className="text-xs text-gray-500 hidden sm:block">
                                   {roleInfo.description}
                                 </span>
+                                {!member.hasAccount && (
+                                  <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                    ⚠ Send invitation
+                                  </span>
+                                )}
                               </div>
                               <div className="flex flex-col gap-1 mt-1">
                                 {member.phone && (
@@ -478,6 +581,11 @@ export default function BusinessSettings() {
                                 {member.department && (
                                   <div className="text-xs text-gray-500">
                                     🏢 {member.department}
+                                  </div>
+                                )}
+                                {member.hasAccount && (
+                                  <div className="text-xs text-green-600">
+                                    ✓ Profile data from user account
                                   </div>
                                 )}
                               </div>
@@ -691,6 +799,58 @@ export default function BusinessSettings() {
                 <div className="text-sm text-gray-600">Email (cannot be changed)</div>
                 <div className="font-medium">{editingMember.email}</div>
               </div>
+
+              {/* Account Status Indicator */}
+              <div className={`p-3 rounded-lg border ${
+                editFormData.userAccountStatus === "created" 
+                  ? "bg-green-50 border-green-200" 
+                  : editFormData.userAccountStatus === "not_created"
+                  ? "bg-yellow-50 border-yellow-200"
+                  : editFormData.userAccountStatus === "checking"
+                  ? "bg-blue-50 border-blue-200"
+                  : "bg-gray-50 border-gray-200"
+              }`}>
+                <div className="flex items-center gap-2">
+                  {editFormData.userAccountStatus === "created" && (
+                    <>
+                      <UserCheck className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Account Created</span>
+                    </>
+                  )}
+                  {editFormData.userAccountStatus === "not_created" && (
+                    <>
+                      <UserX className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm font-medium text-yellow-800">Account Not Created</span>
+                    </>
+                  )}
+                  {editFormData.userAccountStatus === "checking" && (
+                    <>
+                      <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+                      <span className="text-sm font-medium text-blue-800">Checking account status...</span>
+                    </>
+                  )}
+                  {editFormData.userAccountStatus === "error" && (
+                    <>
+                      <X className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-800">Unable to check account status</span>
+                    </>
+                  )}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  {editFormData.userAccountStatus === "created" && 
+                    "This staff member has created their account and can log in. Profile data is loaded from their account."
+                  }
+                  {editFormData.userAccountStatus === "not_created" && 
+                    "This staff member hasn't created their account yet. Send them an invitation email to sign up."
+                  }
+                  {editFormData.userAccountStatus === "checking" && 
+                    "Checking if this staff member has created their account..."
+                  }
+                  {editFormData.userAccountStatus === "error" && 
+                    "Could not verify account status. Profile data shown is from business records only."
+                  }
+                </div>
+              </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -699,7 +859,7 @@ export default function BusinessSettings() {
                     id="edit-firstName"
                     value={editFormData.firstName}
                     onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
-                    placeholder="Enter first name"
+                    placeholder={editFormData.hasUserAccount ? "From user account" : "Enter first name"}
                     disabled={updatingMember}
                   />
                 </div>
@@ -709,7 +869,7 @@ export default function BusinessSettings() {
                     id="edit-lastName"
                     value={editFormData.lastName}
                     onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
-                    placeholder="Enter last name"
+                    placeholder={editFormData.hasUserAccount ? "From user account" : "Enter last name"}
                     disabled={updatingMember}
                   />
                 </div>
@@ -721,7 +881,7 @@ export default function BusinessSettings() {
                   id="edit-phone"
                   value={editFormData.phone}
                   onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                  placeholder="Enter phone number"
+                  placeholder={editFormData.hasUserAccount ? "From user account" : "Enter phone number"}
                   disabled={updatingMember}
                 />
               </div>

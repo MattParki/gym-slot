@@ -37,6 +37,7 @@ export interface BusinessMember {
   joinDate?: string;
   status?: "active" | "inactive";
   lastLogin?: string;
+  hasAccount?: boolean; // Whether the user has created their account in the users collection
 }
 
 export interface SubscriptionInfo {
