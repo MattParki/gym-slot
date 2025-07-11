@@ -88,42 +88,8 @@ export default function BusinessSettings() {
               setEmailDomain(domain || "");
             }
             setMembers(business.members || []);
-            
-            // Check account status for each staff member
-            const staffWithAccountStatus = await Promise.all(
-              (business.staffMembers || []).map(async (member) => {
-                try {
-                  // Check if user has created an account
-                  const usersRef = collection(db, "users");
-                  const q = query(usersRef, where("email", "==", member.email));
-                  const querySnapshot = await getDocs(q);
-                  
-                  if (!querySnapshot.empty) {
-                    const userData = querySnapshot.docs[0].data();
-                    return {
-                      ...member,
-                      hasAccount: true,
-                      firstName: userData.firstName || member.firstName,
-                      lastName: userData.lastName || member.lastName,
-                      phone: userData.phone || member.phone
-                    };
-                  } else {
-                    return {
-                      ...member,
-                      hasAccount: false
-                    };
-                  }
-                } catch (error) {
-                  console.error(`Error checking account for ${member.email}:`, error);
-                  return {
-                    ...member,
-                    hasAccount: false
-                  };
-                }
-              })
-            );
-            
-            setStaffMembers(staffWithAccountStatus);
+            // Only set raw staffMembers, let real-time listener handle hasAccount/profile
+            setStaffMembers(business.staffMembers || []);
             setCompanyName(business.companyName || "");
             setContactInfo(business.contactInfo || "");
           }
@@ -133,7 +99,6 @@ export default function BusinessSettings() {
           setInitialLoading(false);
         }
       };
-
       fetchBusinessData();
     }
   }, [user]);
