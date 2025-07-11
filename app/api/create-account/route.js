@@ -7,8 +7,11 @@ async function sendWelcomeEmail(email) {
   try {
     console.log(`Sending welcome email to new gym owner: ${email}`);
     
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://gym-slot.com";
     const loginUrl = `${baseUrl}/login`;
+    
+    console.log(`Using baseUrl: ${baseUrl}`);
+    console.log(`Email API URL: ${baseUrl}/api/send-email`);
     
     const response = await fetch(`${baseUrl}/api/send-email`, {
       method: "POST",
@@ -83,17 +86,22 @@ Need help getting started? Reply to this email and we'll be happy to assist you.
       }),
     });
 
+    console.log(`Email API response status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed to send welcome email to ${email}:`, errorText);
+      console.error(`Response status: ${response.status}, Response headers:`, response.headers);
       // Don't throw error - account creation should succeed even if email fails
       return false;
     }
 
-    console.log(`✅ Welcome email sent successfully to ${email}`);
+    const emailResult = await response.json();
+    console.log(`✅ Welcome email sent successfully to ${email}:`, emailResult);
     return true;
   } catch (error) {
     console.error(`Error sending welcome email to ${email}:`, error);
+    console.error(`Error details:`, error.message, error.stack);
     // Don't throw error - account creation should succeed even if email fails
     return false;
   }
@@ -115,157 +123,181 @@ export async function POST(req) {
     const { businessId, role } = body;
 
     try {
+      console.log("Verifying ID token...");
       const decodedToken = await adminAuth.verifyIdToken(idToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
 
       console.log(`Processing account creation for user: ${email} (${uid})`);
+      console.log("Admin SDK initialized:", !!adminDb);
 
-      const batch = adminDb.batch();
-      const userProfileRef = adminDb.collection("users").doc(uid);
-      const userProfileDoc = await userProfileRef.get();
-      const now = new Date();
+      try {
+        const batch = adminDb.batch();
+        const userProfileRef = adminDb.collection("users").doc(uid);
 
-      if (businessId) {
-        // User is joining an existing business
-        const businessRef = adminDb.collection("businesses").doc(businessId);
-        const businessDoc = await businessRef.get();
+        console.log("User Profile Ref:", userProfileRef);
+        console.log("Attempting to get user profile document...");
 
-        if (!businessDoc.exists) {
-          return NextResponse.json(
-            { error: "Business not found" },
-            { status: 404 }
-          );
-        }
+        const userProfileDoc = await userProfileRef.get();
+        console.log("Successfully retrieved user profile document");
+        
+        const now = new Date();
 
-        const userRole = role || "customer"; // Default to customer if no role specified
-        console.log(`Adding user ${email} to business ${businessId} with role: ${userRole}`);
+        if (businessId) {
+          // User is joining an existing business
+          console.log(`User joining existing business: ${businessId}`);
+          const businessRef = adminDb.collection("businesses").doc(businessId);
+          const businessDoc = await businessRef.get();
 
-        const businessData = businessDoc.data();
-        const existingStaff = businessData.staffMembers || [];
-        const existingMembers = businessData.members || [];
+          if (!businessDoc.exists) {
+            return NextResponse.json(
+              { error: "Business not found" },
+              { status: 404 }
+            );
+          }
 
-        // Check if user already exists in either array
-        const existsInStaff = existingStaff.some(member => member.email === email);
-        const existsInMembers = existingMembers.some(member => member.email === email);
+          const userRole = role || "customer"; // Default to customer if no role specified
+          console.log(`Adding user ${email} to business ${businessId} with role: ${userRole}`);
 
-        if (existsInStaff || existsInMembers) {
-          console.log(`⚠️ User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
-          return NextResponse.json(
-            { 
-              success: true, 
-              message: "User already exists in business",
-              alreadyExists: true 
-            }
-          );
-        }
+          const businessData = businessDoc.data();
+          const existingStaff = businessData.staffMembers || [];
+          const existingMembers = businessData.members || [];
 
-        // Add user to appropriate array based on role
-        if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
-          // Add as staff member
-          console.log(`➕ Adding ${email} as staff member with role: ${userRole}`);
-          batch.update(businessRef, {
-            staffMembers: adminDb.FieldValue.arrayUnion({
-              id: uid,
+          // Check if user already exists in either array
+          const existsInStaff = existingStaff.some(member => member.email === email);
+          const existsInMembers = existingMembers.some(member => member.email === email);
+
+          if (existsInStaff || existsInMembers) {
+            console.log(`⚠️ User ${email} already exists in business. Staff: ${existsInStaff}, Members: ${existsInMembers}`);
+            return NextResponse.json(
+              { 
+                success: true, 
+                message: "User already exists in business",
+                alreadyExists: true 
+              }
+            );
+          }
+
+          // Add user to appropriate array based on role
+          if (userRole === "staff" || userRole === "personal_trainer" || userRole === "administrator" || userRole === "manager" || userRole === "receptionist") {
+            // Add as staff member
+            console.log(`➕ Adding ${email} as staff member with role: ${userRole}`);
+            batch.update(businessRef, {
+              staffMembers: adminDb.FieldValue.arrayUnion({
+                id: uid,
+                email: email,
+                role: userRole,
+                joinedAt: now.toISOString(),
+                status: "active"
+              }),
+              updatedAt: now
+            });
+          } else {
+            // Add as gym customer/member
+            console.log(`➕ Adding ${email} as gym customer`);
+            batch.update(businessRef, {
+              members: adminDb.FieldValue.arrayUnion({
+                id: uid,
+                email: email,
+                role: "customer",
+                joinedAt: now.toISOString(),
+                status: "active"
+              }),
+              updatedAt: now
+            });
+          }
+
+          // Create user profile with correct role
+          if (userProfileDoc.exists) {
+            batch.update(userProfileRef, {
               email: email,
+              updatedAt: now,
+              businessId: businessId,
               role: userRole,
-              joinedAt: now.toISOString(),
-              status: "active"
-            }),
-            updatedAt: now
-          });
-        } else {
-          // Add as gym customer/member
-          console.log(`➕ Adding ${email} as gym customer`);
-          batch.update(businessRef, {
-            members: adminDb.FieldValue.arrayUnion({
-              id: uid,
+            });
+          } else {
+            batch.set(userProfileRef, {
               email: email,
-              role: "customer",
-              joinedAt: now.toISOString(),
-              status: "active"
-            }),
-            updatedAt: now
-          });
-        }
-
-        // Create user profile with correct role
-        if (userProfileDoc.exists) {
-          batch.update(userProfileRef, {
-            email: email,
-            updatedAt: now,
-            businessId: businessId,
-            role: userRole,
-          });
+              createdAt: now,
+              updatedAt: now,
+              businessId: businessId,
+              role: userRole,
+              displayName: email.split('@')[0],
+              onboardingCompleted: false,
+            });
+          }
         } else {
-          batch.set(userProfileRef, {
+          // Create new business (demo account)
+          console.log(`Creating new business for gym owner: ${email}`);
+          const newBusinessId = uid;
+          const businessRef = adminDb.collection("businesses").doc(newBusinessId);
+          
+          console.log("Checking if business already exists...");
+          const businessDoc = await businessRef.get();
+
+          if (businessDoc.exists) {
+            return NextResponse.json(
+              { error: "Business already exists for this user" },
+              { status: 400 }
+            );
+          }
+
+          console.log("Creating new business document...");
+          // Create new business
+          batch.set(businessRef, {
             email: email,
             createdAt: now,
             updatedAt: now,
-            businessId: businessId,
-            role: userRole,
-            displayName: email.split('@')[0],
-            onboardingCompleted: false,
+            owners: [uid],
+            members: [],
           });
-        }
-      } else {
-        // Create new business (demo account)
-        console.log(`Creating new business for gym owner: ${email}`);
-        const newBusinessId = uid;
-        const businessRef = adminDb.collection("businesses").doc(newBusinessId);
-        const businessDoc = await businessRef.get();
 
-        if (businessDoc.exists) {
-          return NextResponse.json(
-            { error: "Business already exists for this user" },
-            { status: 400 }
-          );
+          // Create user profile as owner
+          console.log("Creating user profile as owner...");
+          if (userProfileDoc.exists) {
+            batch.update(userProfileRef, {
+              email: email,
+              updatedAt: now,
+              businessId: newBusinessId,
+              role: 'owner',
+            });
+          } else {
+            batch.set(userProfileRef, {
+              email: email,
+              createdAt: now,
+              updatedAt: now,
+              businessId: newBusinessId,
+              role: 'owner',
+              displayName: email.split('@')[0],
+              onboardingCompleted: false,
+            });
+          }
         }
 
-        // Create new business
-        batch.set(businessRef, {
-          email: email,
-          createdAt: now,
-          updatedAt: now,
-          owners: [uid],
-          members: [],
+        // Commit the batch transaction
+        console.log("Committing batch transaction...");
+        await batch.commit();
+        console.log(`✅ Account created successfully for ${email}`);
+
+        // Send welcome email to new gym owners (not to users joining existing businesses)
+        if (!businessId) {
+          console.log(`Sending welcome email to new gym owner: ${email}`);
+          await sendWelcomeEmail(email);
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Account created successfully"
         });
 
-        // Create user profile as owner
-        if (userProfileDoc.exists) {
-          batch.update(userProfileRef, {
-            email: email,
-            updatedAt: now,
-            businessId: newBusinessId,
-            role: 'owner',
-          });
-        } else {
-          batch.set(userProfileRef, {
-            email: email,
-            createdAt: now,
-            updatedAt: now,
-            businessId: newBusinessId,
-            role: 'owner',
-            displayName: email.split('@')[0],
-            onboardingCompleted: false,
-          });
-        }
+      } catch (firestoreError) {
+        console.error("Firestore operation error:", firestoreError);
+        console.error("Firestore error details:", firestoreError.message);
+        return NextResponse.json(
+          { error: `Database operation failed: ${firestoreError.message}` },
+          { status: 500 }
+        );
       }
-
-      // Commit the batch transaction
-      await batch.commit();
-      console.log(`✅ Account created successfully for ${email}`);
-
-      // Send welcome email to new gym owners (not to users joining existing businesses)
-      if (!businessId) {
-        console.log(`Sending welcome email to new gym owner: ${email}`);
-        await sendWelcomeEmail(email);
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Account created successfully"
-      });
 
     } catch (error) {
       console.error("Authentication error:", error);
