@@ -380,19 +380,7 @@ export default function GymMemberManagement() {
     setIsModalOpen(true)
   }
 
-  const checkIfEmailExistsAsUser = async (email: string): Promise<boolean> => {
-    try {
-      // Check if email exists in the users collection (any user account)
-      const usersRef = collection(db, "users");
-      const userQuery = query(usersRef, where("email", "==", email));
-      const userSnapshot = await getDocs(userQuery);
-      
-      return !userSnapshot.empty;
-    } catch (error) {
-      console.error("Error checking existing users:", error);
-      return false;
-    }
-  };
+
 
   const checkIfEmailExistsAsCustomer = async (email: string): Promise<boolean> => {
     if (!businessId) return false;
@@ -447,21 +435,10 @@ export default function GymMemberManagement() {
     setLoading(true)
 
     try {
-      // Check if email already exists as a user or customer 
+      // Check if email already exists as a customer 
       // (for new customers, or if editing and email was changed)
       if (!editingMember || (editingMember && editingMember.email !== formData.email)) {
         setValidatingEmail(true);
-        
-        const isExistingUser = await checkIfEmailExistsAsUser(formData.email);
-        if (isExistingUser) {
-          setValidatingEmail(false);
-          toast.error(
-            "⚠️ This email already has a user account in the system. " +
-            "Users with accounts cannot be added as customers. Please use a different email address.",
-            { duration: 6000 }
-          );
-          return;
-        }
 
         // Check if email already exists as a customer
         const isExistingCustomer = await checkIfEmailExistsAsCustomer(formData.email);
@@ -501,14 +478,34 @@ export default function GymMemberManagement() {
         
         if (sendInviteEmail) {
           try {
-            // Send invitation email logic here
-            toast.success("Member added and invitation sent!")
+            // Send customer invitation email
+            const response = await fetch("/api/send-invite", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                businessId: businessId,
+                businessName: businessName || "Your Gym",
+                role: "customer",
+                customerName: `${formData.firstName} ${formData.lastName}`.trim(),
+                membershipPlan: formData.membershipPlan
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Failed to send invitation");
+            }
+
+            toast.success("Customer added and invitation sent! They can now download the mobile app to book classes.");
           } catch (emailError) {
             console.error("Error sending invitation:", emailError)
-            toast.success("Member added successfully (invitation email failed)")
+            toast.success("Customer added successfully (invitation email failed to send)")
           }
         } else {
-          toast.success("Member added successfully")
+          toast.success("Customer added successfully")
         }
       }
 
@@ -978,7 +975,7 @@ export default function GymMemberManagement() {
                   )}
                 </div>
                 <p className="text-xs text-gray-600">
-                  We'll check if this email already has a user account or is used by another customer
+                  We'll check if this email is already used by another customer
                 </p>
               </div>
               <div className="space-y-2">
@@ -1135,7 +1132,7 @@ export default function GymMemberManagement() {
                   onCheckedChange={(checked) => setSendInviteEmail(checked === true)}
                 />
                 <Label htmlFor="sendInvite" className="text-sm">
-                  Send invitation email to customer (they can create an account to use the mobile app)
+                  Send invitation email to customer (they can create an account to book classes on the mobile app)
                 </Label>
               </div>
             )}
