@@ -2,12 +2,20 @@ export interface UserProfile {
   uid?: string;
   email?: string;
   displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePicture?: string;
+  bio?: string;
+  specialties?: string[];
+  certifications?: string[];
   role: string;
-  industry: string;
-  companySize: string;
+  industry?: string;
+  companySize?: string;
   businessId?: string;
-  onboardingCompleted: boolean;
-  createdAt: string;
+  onboardingCompleted?: boolean;
+  profileCompleted?: boolean;
+  createdAt?: string;
   updatedAt?: string;
 }
 

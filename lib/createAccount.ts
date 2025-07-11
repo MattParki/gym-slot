@@ -23,7 +23,7 @@ export async function createAccount(
 
   try {
     const idToken = await getIdToken(user);
-    console.log("Attempting API endpoint for:", user.email, "with role:", role);
+    console.log("🔄 Attempting API endpoint for:", user.email, "with role:", role, "businessId:", businessId);
 
     const response = await fetch("/api/create-account", {
       method: "POST",
@@ -34,21 +34,28 @@ export async function createAccount(
       body: JSON.stringify({ idToken, businessId, role })
     });
 
+    console.log("📡 API Response status:", response.status);
+
     // Check if response is ok
     if (response.ok) {
       const result = await response.json();
       console.log("✅ API endpoint succeeded for:", user.email);
+      console.log("📋 API Result:", result);
       return result;
     }
 
     // Only use fallback if API truly failed
     const errorText = await response.text();
-    console.log("❌ API endpoint failed, using fallback for:", user.email, "Error:", errorText);
+    console.log("❌ API endpoint failed, using fallback for:", user.email);
+    console.log("📄 API Error details:", errorText);
+    console.log("🔄 Switching to direct Firestore creation...");
     return await createAccountDirectly(user, businessId, role);
 
   } catch (networkError) {
     // Only catch network errors, not API errors
-    console.log("🌐 Network error, using fallback for:", user.email, "Error:", networkError);
+    console.log("🌐 Network error, using fallback for:", user.email);
+    console.log("📄 Network Error details:", networkError);
+    console.log("🔄 Switching to direct Firestore creation...");
     return await createAccountDirectly(user, businessId, role);
   }
 }
@@ -123,6 +130,7 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
       }
 
       // Create user profile with correct role
+      console.log(`🔄 Fallback: Creating user profile for ${email} with role: ${userRole}`);
       await setDoc(doc(db, "users", uid), {
         email: email,
         createdAt: serverTimestamp(),
@@ -130,8 +138,19 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
         businessId: businessId, 
         role: userRole,  
         displayName: displayName,
-        onboardingCompleted: false
+        onboardingCompleted: false,
+        // Additional fields for staff members to fill out
+        firstName: "",
+        lastName: "",
+        phone: "",
+        profilePicture: "",
+        bio: "",
+        specialties: [],
+        certifications: [],
+        // Profile completion status
+        profileCompleted: false,
       });
+      console.log(`✅ Fallback: User profile created for ${email}`);
     } else {
       // Create new business (demo account)
       await setDoc(doc(db, "businesses", uid), {
@@ -154,7 +173,17 @@ export async function createAccountDirectly(user: User, businessId?: string | nu
         businessId: uid, 
         role: 'owner',  
         displayName: displayName,
-        onboardingCompleted: false
+        onboardingCompleted: false,
+        // Additional fields for profile completion
+        firstName: "",
+        lastName: "",
+        phone: "",
+        profilePicture: "",
+        bio: "",
+        specialties: [],
+        certifications: [],
+        // Profile completion status
+        profileCompleted: false,
       });
     }
 

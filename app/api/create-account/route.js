@@ -208,7 +208,9 @@ export async function POST(req) {
           }
 
           // Create user profile with correct role
+          console.log(`Creating user profile for ${email} with role: ${userRole}`);
           if (userProfileDoc.exists) {
+            console.log(`Updating existing user profile for ${email}`);
             batch.update(userProfileRef, {
               email: email,
               updatedAt: now,
@@ -216,6 +218,7 @@ export async function POST(req) {
               role: userRole,
             });
           } else {
+            console.log(`Creating new user profile for ${email}`);
             batch.set(userProfileRef, {
               email: email,
               createdAt: now,
@@ -224,8 +227,19 @@ export async function POST(req) {
               role: userRole,
               displayName: email.split('@')[0],
               onboardingCompleted: false,
+              // Additional fields for staff members to fill out
+              firstName: "",
+              lastName: "",
+              phone: "",
+              profilePicture: "",
+              bio: "",
+              specialties: [],
+              certifications: [],
+              // Profile completion status
+              profileCompleted: false,
             });
           }
+          console.log(`✅ User profile setup completed for ${email}`);
         } else {
           // Create new business (demo account)
           console.log(`Creating new business for gym owner: ${email}`);
@@ -276,7 +290,25 @@ export async function POST(req) {
 
         // Commit the batch transaction
         console.log("Committing batch transaction...");
-        await batch.commit();
+        console.log("Batch operations to be committed:", batch._ops?.length || "unknown");
+        
+        try {
+          await batch.commit();
+          console.log(`✅ Batch transaction committed successfully for ${email}`);
+          
+          // Verify user profile was created
+          const verifyUserDoc = await userProfileRef.get();
+          if (verifyUserDoc.exists) {
+            console.log(`✅ User profile verification successful for ${email}:`, verifyUserDoc.data());
+          } else {
+            console.log(`❌ User profile verification failed for ${email} - document does not exist`);
+          }
+          
+        } catch (batchError) {
+          console.error(`❌ Batch transaction failed for ${email}:`, batchError);
+          throw batchError;
+        }
+        
         console.log(`✅ Account created successfully for ${email}`);
 
         // Send welcome email to new gym owners (not to users joining existing businesses)
