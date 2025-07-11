@@ -129,6 +129,7 @@ export default function BusinessSettings() {
             return {
               ...member,
               hasAccount: true,
+              id: userDoc.uid || member.id, // Sync id to UID if available
               firstName: userDoc.firstName || member.firstName,
               lastName: userDoc.lastName || member.lastName,
               phone: userDoc.phone || member.phone,
@@ -147,7 +148,7 @@ export default function BusinessSettings() {
       const chunk = staffEmails.slice(i, i + 10);
       const chunkQuery = query(usersRef, where("email", "in", chunk));
       const unsubscribe = onSnapshot(chunkQuery, (snapshot) => {
-        const docs = snapshot.docs.map((doc) => doc.data());
+        const docs = snapshot.docs.map((doc) => ({ ...doc.data(), uid: doc.id }));
         updateStaffFromSnapshot(docs);
       });
       unsubscribes.push(unsubscribe);
@@ -160,222 +161,16 @@ export default function BusinessSettings() {
     };
   }, [staffMembers.map((m) => (m.email || "").trim().toLowerCase()).join(",")]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !businessId) return;
-
-    setLoading(true);
-    try {
-      // Update business data in Firestore
-      await updateBusiness(businessId, {
-        members,
-        companyName,
-        contactInfo,
-      });
-
-      toast.success("Business settings have been updated.");
-    } catch (error) {
-      toast.error("Failed to update business settings. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  // Update all staff member actions to use email as the primary key
+  const findStaffByEmail = (email: string) => {
+    const normalized = (email || "").trim().toLowerCase();
+    return staffMembers.find((m) => (m.email || "").trim().toLowerCase() === normalized);
   };
 
-  // Helper function to get role display information
-  const getRoleInfo = (roleValue: string) => {
-    const role = STAFF_ROLES.find(r => r.value === roleValue);
-    return role || { value: roleValue, label: roleValue.charAt(0).toUpperCase() + roleValue.slice(1), description: "Custom role" };
-  };
-
-  const handleEditMember = async (member: BusinessMember) => {
-    setEditingMember(member);
-    setEditFormData({
-      firstName: member.firstName || "",
-      lastName: member.lastName || "",
-      phone: member.phone || "",
-      department: member.department || "",
-      role: member.role,
-      hasUserAccount: false, // Default to false
-      userAccountStatus: "checking" // Start checking
-    });
-
-    setIsEditModalOpen(true);
-
-    // Check if the user has created their account and load their profile data
-    try {
-      console.log(`Checking for user account: ${member.email}`);
-      
-      // First, try to find user by email in users collection
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", member.email));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        
-        console.log(`✅ Found user profile for ${member.email}:`, userData);
-        
-        // Update form with user's profile data
-        setEditFormData(prev => ({
-          ...prev,
-          firstName: userData.firstName || prev.firstName,
-          lastName: userData.lastName || prev.lastName,
-          phone: userData.phone || prev.phone,
-          hasUserAccount: true,
-          userAccountStatus: "created"
-        }));
-      } else {
-        console.log(`⚠️ No user profile found for ${member.email} - user hasn't created account yet`);
-        setEditFormData(prev => ({
-          ...prev,
-          hasUserAccount: false,
-          userAccountStatus: "not_created"
-        }));
-      }
-    } catch (error) {
-      console.error("Error checking user account:", error);
-      setEditFormData(prev => ({
-        ...prev,
-        hasUserAccount: false,
-        userAccountStatus: "error"
-      }));
-    }
-  };
-
-  const handleUpdateMember = async () => {
-    if (!businessId || !editingMember) return;
-
-    try {
-      setUpdatingMember(true);
-      await updateBusinessStaffMember(businessId, editingMember.id, editFormData);
-
-      // Update local state
-      setStaffMembers(staffMembers.map(member => 
-        member.id === editingMember.id ? { ...member, ...editFormData } : member
-      ));
-
-      setIsEditModalOpen(false);
-      setEditingMember(null);
-      toast.success("Staff member updated successfully");
-    } catch (error) {
-      console.error("Error updating staff member:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to update staff member");
-    } finally {
-      setUpdatingMember(false);
-    }
-  };
-
-  const handlePasswordReset = async (email: string) => {
-    try {
-      setSendingPasswordReset(true);
-      const result = await sendPasswordResetEmail(email);
-      
-      if (result.devMode && result.resetLink) {
-        // Development mode - show the reset link
-        toast.success(
-          <div>
-            <p>Development Mode: Password reset link generated!</p>
-            <p className="text-xs mt-2">
-              <a 
-                href={result.resetLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 underline break-all"
-              >
-                Click here to reset password
-              </a>
-            </p>
-          </div>,
-          { duration: 10000 }
-        );
-      } else {
-        toast.success(`Password reset email sent to ${email}`);
-      }
-    } catch (error) {
-      console.error("Error sending password reset:", error);
-      
-      const errorMessage = error instanceof Error ? error.message : "Failed to send password reset email";
-      
-      // Check if it's a user-not-found error
-      if (errorMessage.includes("complete account setup") || errorMessage.includes("User not found")) {
-        toast.error(
-          "This staff member hasn't completed their account setup yet. " +
-          "Consider re-sending their invitation email instead.",
-          { duration: 6000 }
-        );
-      } else if (errorMessage.includes("email")) {
-        toast.error(
-          "Email service is not configured. Please contact your system administrator.",
-          { duration: 6000 }
-        );
-      } else {
-        toast.error(errorMessage);
-      }
-    } finally {
-      setSendingPasswordReset(false);
-    }
-  };
-
-  const handleAddMember = async () => {
-    if (!businessId || !newMemberEmail.trim()) return;
-
-    try {
-      setAddingMember(true);
-      const selectedRoleData = STAFF_ROLES.find(role => role.value === selectedRole);
-      const result = await addStaffMember(businessId, newMemberEmail.trim(), selectedRole);
-
-      // Check if adding member was successful
-      if (!result.success) {
-        if (result.alreadyExists) {
-          // Show a friendly notification instead of an error
-          toast.error(`${newMemberEmail} is already a member of your business.`, {
-            duration: 5000,
-            icon: '👥',
-          });
-        } else {
-          toast.error(result.error || "Failed to add staff member.");
-        }
-        return;
-      }
-
-      const newMember = result.member!;
-
-      // Send staff invitation email
-      const response = await fetch("/api/send-invite", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: newMember.email,
-          businessId: businessId,
-          businessName: companyName || "Your Business",
-          role: selectedRole
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to send invitation");
-      }
-
-      setStaffMembers([...staffMembers, newMember]);
-      setNewMemberEmail("");
-      setSelectedRole("staff"); // Reset to default
-
-      toast.success(`${newMemberEmail} has been added as a ${selectedRoleData?.label || 'staff member'} and invited.`);
-    } catch (error) {
-      console.error("Error adding staff member:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to add or invite staff member.");
-    } finally {
-      setAddingMember(false);
-    }
-  };
-
-
-  const handleRemoveMember = async (memberId: string) => {
-    const member = staffMembers.find((m) => m.id === memberId);
+  // Handler to start delete flow (now uses email)
+  const handleRemoveMember = async (memberIdOrEmail: string) => {
+    // Try to find by id, but fallback to email
+    let member = staffMembers.find((m) => m.id === memberIdOrEmail) || findStaffByEmail(memberIdOrEmail);
     if (!member) return;
     setPendingDeleteMember(member);
     setDeleteLoading(true);
