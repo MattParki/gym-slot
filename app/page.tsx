@@ -46,17 +46,17 @@ export default function Home() {
         {!user ? (
           <>
             {/* Hero Section */}
-            <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white">
-              <div className="container mx-auto px-4 py-16 md:px-8 md:py-20">
-                <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-gradient-to-r from-[#141E33] to-[#1a2442] text-white w-full">
+              <div className="w-full px-4 py-12 sm:py-16 md:px-8 md:py-20">
+                <div className="w-full sm:max-w-4xl mx-auto text-center">
                   <Badge className="mb-6 bg-green-500/20 text-green-400 border-green-500/30">
                     Complete Gym Management Solution
                   </Badge>
-                  <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                    Transform Your Gym with 
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight break-words">
+                    Transform Your Gym with
                     <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent"> Smart Management</span>
                   </h1>
-                  <p className="text-xl md:text-2xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
+                  <p className="text-base sm:text-xl md:text-2xl text-white/80 mb-8 max-w-3xl mx-auto leading-relaxed">
                     Complete business management platform with member CRM, class scheduling, and a branded mobile app for your gym members. Everything you need to run a modern fitness business.
                   </p>
 
@@ -67,14 +67,14 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full">
                     <Link href="/signup">
-                      <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                      <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto">
                         Start Free Trial
                       </Button>
                     </Link>
                     <Link href="/login">
-                      <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                      <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all w-full sm:w-auto">
                         <LogIn className="h-5 w-5 mr-2" />
                         Sign In
                       </Button>
