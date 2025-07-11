@@ -128,6 +128,7 @@ export default function BusinessSettings() {
           if (userDoc) {
             return {
               ...member,
+              id: userDoc.uid || member.id, // Sync the id to the user's UID
               hasAccount: true,
               firstName: userDoc.firstName || member.firstName,
               lastName: userDoc.lastName || member.lastName,
@@ -147,7 +148,7 @@ export default function BusinessSettings() {
       const chunk = staffEmails.slice(i, i + 10);
       const chunkQuery = query(usersRef, where("email", "in", chunk));
       const unsubscribe = onSnapshot(chunkQuery, (snapshot) => {
-        const docs = snapshot.docs.map((doc) => doc.data());
+        const docs = snapshot.docs.map((doc) => ({ ...doc.data(), uid: doc.id }));
         updateStaffFromSnapshot(docs);
       });
       unsubscribes.push(unsubscribe);
@@ -248,11 +249,12 @@ export default function BusinessSettings() {
 
     try {
       setUpdatingMember(true);
-      await updateBusinessStaffMember(businessId, editingMember.id, editFormData);
+      // Use email to find and update the staff member
+      await updateBusinessStaffMember(businessId, editingMember.email, editFormData);
 
-      // Update local state
+      // Update local state by email
       setStaffMembers(staffMembers.map(member => 
-        member.id === editingMember.id ? { ...member, ...editFormData } : member
+        member.email === editingMember.email ? { ...member, ...editFormData } : member
       ));
 
       setIsEditModalOpen(false);
@@ -374,8 +376,8 @@ export default function BusinessSettings() {
   };
 
 
-  const handleRemoveMember = async (memberId: string) => {
-    const member = staffMembers.find((m) => m.id === memberId);
+  const handleRemoveMember = async (memberEmail: string) => {
+    const member = staffMembers.find((m) => m.email === memberEmail);
     if (!member) return;
     setPendingDeleteMember(member);
     setDeleteLoading(true);
@@ -416,8 +418,8 @@ export default function BusinessSettings() {
       const data = await res.json();
       if (res.ok && data.success) {
         setDeleteConfirmed(true);
-        // Remove from staff list in UI
-        setStaffMembers((prev) => prev.filter((m) => m.id !== pendingDeleteMember.id));
+        // Remove from staff list in UI by email
+        setStaffMembers((prev) => prev.filter((m) => m.email !== pendingDeleteMember.email));
       } else {
         setDeleteError(data.error || "Failed to delete user");
       }
@@ -683,7 +685,7 @@ export default function BusinessSettings() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleRemoveMember(member.id)}
+                            onClick={() => handleRemoveMember(member.email)}
                             disabled={loading || addingMember}
                             className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                             title="Remove staff member"

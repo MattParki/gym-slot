@@ -331,7 +331,7 @@ export async function removeBusinessStaffMember(businessId: string, memberId: st
   }
 }
 
-export async function updateBusinessStaffMember(businessId: string, memberId: string, updates: Partial<BusinessMember>): Promise<void> {
+export async function updateBusinessStaffMember(businessId: string, memberEmailOrId: string, updates: Partial<BusinessMember>): Promise<void> {
   try {
     const businessRef = doc(db, "businesses", businessId);
     const business = await getDoc(businessRef);
@@ -342,9 +342,14 @@ export async function updateBusinessStaffMember(businessId: string, memberId: st
     }
 
     const staffMembers = businessData.staffMembers || [];
-    const updatedStaffMembers = staffMembers.map((member: BusinessMember) => 
-      member.id === memberId ? { ...member, ...updates } : member
-    );
+    
+    // Find member by email first (preferred), then by ID for backwards compatibility
+    const updatedStaffMembers = staffMembers.map((member: BusinessMember) => {
+      const matchesEmail = member.email === memberEmailOrId;
+      const matchesId = member.id === memberEmailOrId;
+      
+      return (matchesEmail || matchesId) ? { ...member, ...updates } : member;
+    });
 
     await updateDoc(businessRef, {
       staffMembers: updatedStaffMembers,
