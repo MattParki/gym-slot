@@ -380,47 +380,16 @@ export default function GymMemberManagement() {
     setIsModalOpen(true)
   }
 
-  const checkIfEmailExistsAsStaff = async (email: string): Promise<boolean> => {
-    if (!businessId) return false;
-    
+  const checkIfEmailExistsAsUser = async (email: string): Promise<boolean> => {
     try {
-      // Check 1: Staff members in the businesses collection staffMembers array
-      const businessRef = doc(db, "businesses", businessId);
-      const businessDoc = await getDoc(businessRef);
-      
-      if (businessDoc.exists()) {
-        const businessData = businessDoc.data();
-        const staffMembers = businessData.staffMembers || [];
-        
-        const isInStaffArray = staffMembers.some((member: any) => member.email === email);
-        if (isInStaffArray) {
-          return true;
-        }
-      }
-      
-      // Check 2: Users collection for staff/owner roles associated with this business
+      // Check if email exists in the users collection (any user account)
       const usersRef = collection(db, "users");
-      const staffQuery = query(usersRef, where("email", "==", email));
-      const staffSnapshot = await getDocs(staffQuery);
+      const userQuery = query(usersRef, where("email", "==", email));
+      const userSnapshot = await getDocs(userQuery);
       
-      if (!staffSnapshot.empty) {
-        const userDoc = staffSnapshot.docs[0];
-        const userData = userDoc.data();
-        const userRole = userData.role;
-        const userBusinessIds = userData.businessIds || [];
-        
-        // Check if user has staff/owner role and is associated with this business
-        const isStaffRole = ['owner', 'business-owner', 'staff', 'administrator', 'manager', 'personal_trainer', 'receptionist'].includes(userRole);
-        const isAssociatedWithBusiness = userBusinessIds.includes(businessId);
-        
-        if (isStaffRole && isAssociatedWithBusiness) {
-          return true;
-        }
-      }
-      
-      return false;
+      return !userSnapshot.empty;
     } catch (error) {
-      console.error("Error checking staff members:", error);
+      console.error("Error checking existing users:", error);
       return false;
     }
   };
@@ -478,17 +447,17 @@ export default function GymMemberManagement() {
     setLoading(true)
 
     try {
-      // Check if email already exists as a staff member or customer 
+      // Check if email already exists as a user or customer 
       // (for new customers, or if editing and email was changed)
       if (!editingMember || (editingMember && editingMember.email !== formData.email)) {
         setValidatingEmail(true);
         
-        const isStaffMember = await checkIfEmailExistsAsStaff(formData.email);
-        if (isStaffMember) {
+        const isExistingUser = await checkIfEmailExistsAsUser(formData.email);
+        if (isExistingUser) {
           setValidatingEmail(false);
           toast.error(
-            "⚠️ This email belongs to a staff member. Staff members cannot be added as customers. " +
-            "Please use a different email address for customer accounts.",
+            "⚠️ This email already has a user account in the system. " +
+            "Users with accounts cannot be added as customers. Please use a different email address.",
             { duration: 6000 }
           );
           return;
@@ -1009,7 +978,7 @@ export default function GymMemberManagement() {
                   )}
                 </div>
                 <p className="text-xs text-gray-600">
-                  We'll check if this email is already used by a staff member or customer
+                  We'll check if this email already has a user account or is used by another customer
                 </p>
               </div>
               <div className="space-y-2">
