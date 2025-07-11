@@ -60,6 +60,13 @@ export default function Home() {
                     Complete business management platform with member CRM, class scheduling, and a branded mobile app for your gym members. Everything you need to run a modern fitness business.
                   </p>
 
+                  <div className="bg-blue-50/10 backdrop-blur-sm border border-blue-200/30 rounded-lg p-4 mb-6">
+                    <p className="text-blue-200 text-sm">
+                      <strong>Note:</strong> This web platform is for gym staff and administrators only. 
+                      Customers should use the mobile app to book classes and manage memberships.
+                    </p>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <Link href="/signup">
                       <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all">

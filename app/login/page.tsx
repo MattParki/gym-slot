@@ -39,6 +39,23 @@ export default function LoginPage() {
               </Link>
             </div>
           </div>
+
+          {/* Customer section */}
+          <div className="mt-6 text-center">
+            <div className="bg-green-500/10 backdrop-blur-md rounded-lg p-6 border border-green-500/20">
+              <h3 className="text-green-400 text-lg font-semibold mb-2">
+                Are you a gym member?
+              </h3>
+              <p className="text-green-300/80 text-sm mb-4">
+                Download the mobile app to book classes, view schedules, and manage your membership.
+              </p>
+              <Link href="/download-app">
+                <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold">
+                  Download Mobile App
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

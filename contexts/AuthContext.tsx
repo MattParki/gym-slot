@@ -126,6 +126,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut(auth); // Prevent session from persisting
       throw new Error("This email is not authorized to access the admin dashboard. If you're a customer, please use the mobile app to book classes.");
     }
+
+    // Additional check: Verify the user's role is a staff member
+    try {
+      const userProfile = await getUserProfile(user.uid);
+      if (!userProfile) {
+        await signOut(auth);
+        throw new Error("User profile not found. Please contact your administrator.");
+      }
+
+      const staffRoles = ['owner', 'business-owner', 'staff', 'personal_trainer', 'administrator', 'manager', 'receptionist'];
+      if (!staffRoles.includes(userProfile.role)) {
+        await signOut(auth);
+        throw new Error("This account is for customers only. Please use the mobile app to book classes and manage your membership.");
+      }
+    } catch (profileError) {
+      await signOut(auth);
+      throw new Error("Unable to verify your account permissions. Please contact your administrator.");
+    }
   }
   
 

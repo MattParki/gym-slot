@@ -46,6 +46,17 @@ export default function Login() {
         toast.error("Please verify your email. Check your inbox and junk folder.", {
           icon: <MailIcon className="w-5 h-5" />,
         });
+      } else if (message.includes("customer") || message.includes("mobile app")) {
+        // Customer trying to access CRM - redirect to download app
+        toast.error("This login is for staff members only. Customers should use the mobile app.", {
+          icon: "📱",
+          duration: 5000,
+        });
+        
+        // Redirect to download app page after a short delay
+        setTimeout(() => {
+          router.push("/download-app");
+        }, 2000);
       } else {
         toast.error("Failed to sign in: " + message);
       }
@@ -62,10 +73,16 @@ export default function Login() {
         <div className="mx-auto mb-4 h-16 w-16 bg-gradient-to-br from-green-600 to-blue-600 rounded-full flex items-center justify-center">
           <LogIn className="h-8 w-8 text-white" />
         </div>
-        <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+        <CardTitle className="text-2xl font-bold text-gray-900">Staff Login</CardTitle>
         <p className="text-gray-600 text-sm mt-2">
-          Sign in to your account to continue
+          Sign in to access the admin dashboard
         </p>
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-700 text-xs">
+            <strong>Note:</strong> This login is for gym staff and administrators only. 
+            Customers should use the mobile app to book classes.
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
