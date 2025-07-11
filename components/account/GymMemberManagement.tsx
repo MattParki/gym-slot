@@ -384,17 +384,41 @@ export default function GymMemberManagement() {
     if (!businessId) return false;
     
     try {
+      // Check 1: Staff members in the businesses collection staffMembers array
       const businessRef = doc(db, "businesses", businessId);
       const businessDoc = await getDoc(businessRef);
       
-      if (!businessDoc.exists()) {
-        return false;
+      if (businessDoc.exists()) {
+        const businessData = businessDoc.data();
+        const staffMembers = businessData.staffMembers || [];
+        
+        const isInStaffArray = staffMembers.some((member: any) => member.email === email);
+        if (isInStaffArray) {
+          return true;
+        }
       }
       
-      const businessData = businessDoc.data();
-      const staffMembers = businessData.staffMembers || [];
+      // Check 2: Users collection for staff/owner roles associated with this business
+      const usersRef = collection(db, "users");
+      const staffQuery = query(usersRef, where("email", "==", email));
+      const staffSnapshot = await getDocs(staffQuery);
       
-      return staffMembers.some((member: any) => member.email === email);
+      if (!staffSnapshot.empty) {
+        const userDoc = staffSnapshot.docs[0];
+        const userData = userDoc.data();
+        const userRole = userData.role;
+        const userBusinessIds = userData.businessIds || [];
+        
+        // Check if user has staff/owner role and is associated with this business
+        const isStaffRole = ['owner', 'business-owner', 'staff', 'administrator', 'manager', 'personal_trainer', 'receptionist'].includes(userRole);
+        const isAssociatedWithBusiness = userBusinessIds.includes(businessId);
+        
+        if (isStaffRole && isAssociatedWithBusiness) {
+          return true;
+        }
+      }
+      
+      return false;
     } catch (error) {
       console.error("Error checking staff members:", error);
       return false;
