@@ -85,19 +85,33 @@ export default function DemoSignup() {
         await createAccount(userCredential.user, businessId, role);
         
         if (businessId) {
-          const successMessage = role && isStaffRole(role) 
-            ? `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 You can now access the admin dashboard and view your profile.`
-            : "Welcome to the gym! 🎉 You can now log in and view your profile.";
-          
-          toast.success(successMessage, {
-            duration: 6000,
-            icon: '🎉',
-          });
-          
-          // Redirect to account settings where users can see their role
-          setTimeout(() => {
-            router.push("/account-settings");
-          }, 2000);
+          if (role && isStaffRole(role)) {
+            // Staff member signup - redirect to CRM
+            const successMessage = `Welcome to the team as a ${getRoleDisplayName(role)}! 🎉 You can now access the admin dashboard and view your profile.`;
+            
+            toast.success(successMessage, {
+              duration: 6000,
+              icon: '🎉',
+            });
+            
+            // Redirect to account settings where users can see their role
+            setTimeout(() => {
+              router.push("/account-settings");
+            }, 2000);
+          } else {
+            // Customer signup - redirect to download app page
+            const successMessage = "Welcome to the gym! 🎉 Your account has been created. Please download the mobile app to book classes and manage your membership.";
+            
+            toast.success(successMessage, {
+              duration: 8000,
+              icon: '📱',
+            });
+            
+            // Redirect to download app page
+            setTimeout(() => {
+              router.push("/download-app");
+            }, 2000);
+          }
         } else {
           toast.success(
             "Account created successfully! ✉️ You can now log in and access your dashboard.",
@@ -121,9 +135,9 @@ export default function DemoSignup() {
           router.push("/login");
         }, 3000);
       }
-    } catch (err) {
-      console.error("Account creation error:", err);
-      toast.error(`Failed to create account: ${(err as Error).message || "Unknown error"}`);
+    } catch (error) {
+      console.error("Error during signup:", error);
+      toast.error("Failed to create account: " + (error as Error).message);
     } finally {
       setLoading(false);
     }

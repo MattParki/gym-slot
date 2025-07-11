@@ -2,6 +2,8 @@
 
 import LayoutWrapper from "@/components/LayoutWrapper"
 import Link from "next/link"
+import { useAuth } from "@/contexts/AuthContext"
+import { useState, useEffect } from "react"
 import { 
   Smartphone, 
   Users, 
@@ -12,39 +14,97 @@ import {
   Download,
   MessageSquare,
   Shield,
-  Zap
+  Zap,
+  LogOut
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function FeaturesShowcase() {
+  const { user, userProfile, logout } = useAuth();
+  const [isCustomer, setIsCustomer] = useState(false);
+
+  useEffect(() => {
+    if (userProfile?.role === 'customer') {
+      setIsCustomer(true);
+    }
+  }, [userProfile]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Error logging out:", error);
+    }
+  };
+
   return (
     <LayoutWrapper>
       <div className="min-h-screen">
+        {/* Customer Welcome Section */}
+        {isCustomer && (
+          <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white py-12">
+            <div className="container mx-auto px-8">
+              <div className="max-w-4xl mx-auto text-center">
+                <h1 className="text-4xl md:text-5xl font-bold mb-4">
+                  Welcome to Your Gym! 🎉
+                </h1>
+                <p className="text-xl text-white/90 mb-6">
+                  Your account has been successfully created. To book classes and manage your membership, please download the mobile app.
+                </p>
+                <Alert className="bg-white/10 border-white/30 text-white mb-6">
+                  <Smartphone className="h-4 w-4" />
+                  <AlertDescription className="text-white">
+                    <strong>Important:</strong> The mobile app is where you'll book classes, view schedules, and manage your membership. 
+                    This web platform is only for gym staff and administrators.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex gap-4 justify-center">
+                  <Button 
+                    onClick={handleLogout}
+                    variant="outline" 
+                    className="bg-white/10 text-white border-white/30 hover:bg-white/20"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Log Out
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-[#141E33] via-[#1a2847] to-[#0f1925] text-white py-20">
+        <div className={`bg-gradient-to-br from-[#141E33] via-[#1a2847] to-[#0f1925] text-white ${isCustomer ? 'py-12' : 'py-20'}`}>
           <div className="container mx-auto px-8">
             <div className="max-w-4xl mx-auto text-center">
               <Badge className="mb-6 bg-green-500/20 text-green-400 border-green-500/30">
-                Complete Business Solution
+                {isCustomer ? 'Mobile App for Members' : 'Complete Business Solution'}
               </Badge>
               <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-                See GymSlot in 
-                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent"> Action</span>
+                {isCustomer ? 'Download the' : 'See GymSlot in'}
+                <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                  {isCustomer ? ' Mobile App' : ' Action'}
+                </span>
               </h1>
               <p className="text-xl text-white/80 mb-8 max-w-3xl mx-auto">
-                Discover how GymSlot transforms gym operations with our comprehensive management platform. 
-                From member CRM to mobile apps, see everything in action.
+                {isCustomer 
+                  ? 'Get the full gym experience in your pocket. Book classes, view schedules, and manage your membership all from your mobile device.'
+                  : 'Discover how GymSlot transforms gym operations with our comprehensive management platform. From member CRM to mobile apps, see everything in action.'
+                }
               </p>
               
-              <div className="flex justify-center">
-                <Link href="/signup">
-                  <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold">
-                    Start Free Trial
-                  </Button>
-                </Link>
-              </div>
+              {!isCustomer && (
+                <div className="flex justify-center">
+                  <Link href="/signup">
+                    <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-4 text-lg font-semibold">
+                      Start Free Trial
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -59,11 +119,13 @@ export default function FeaturesShowcase() {
                   Mobile Experience
                 </Badge>
                 <h2 className="text-4xl font-bold text-gray-900 mb-6">
-                  Branded Mobile App for Your Members
+                  {isCustomer ? 'Your Gym in Your Pocket' : 'Branded Mobile App for Your Members'}
                 </h2>
                 <p className="text-xl text-gray-600 mb-8">
-                  Give your members a premium mobile experience with a custom app featuring your gym's branding. 
-                  Available on both iOS and Android app stores.
+                  {isCustomer 
+                    ? 'Everything you need to stay connected with your gym. Book classes, check schedules, and manage your membership - all from your mobile device.'
+                    : 'Give your members a premium mobile experience with a custom app featuring your gym\'s branding. Available on both iOS and Android app stores.'
+                  }
                 </p>
 
                 <div className="space-y-6 mb-8">
@@ -73,7 +135,12 @@ export default function FeaturesShowcase() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1">Instant Class Booking</h3>
-                      <p className="text-gray-600">Members can book classes, join waitlists, and receive real-time updates.</p>
+                      <p className="text-gray-600">
+                        {isCustomer 
+                          ? 'Book your favorite classes, join waitlists, and receive real-time updates about your bookings.'
+                          : 'Members can book classes, join waitlists, and receive real-time updates.'
+                        }
+                      </p>
                     </div>
                   </div>
                   
@@ -83,7 +150,12 @@ export default function FeaturesShowcase() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1">Membership Management</h3>
-                      <p className="text-gray-600">View membership details, payment history, and access QR codes for check-in.</p>
+                      <p className="text-gray-600">
+                        {isCustomer 
+                          ? 'View your membership details, payment history, and access your digital membership card.'
+                          : 'View membership details, payment history, and access QR codes for check-in.'
+                        }
+                      </p>
                     </div>
                   </div>
                   
@@ -93,7 +165,12 @@ export default function FeaturesShowcase() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-1">Push Notifications</h3>
-                      <p className="text-gray-600">Automated reminders for classes, announcements, and special offers.</p>
+                      <p className="text-gray-600">
+                        {isCustomer 
+                          ? 'Get reminders for your classes, gym announcements, and special offers.'
+                          : 'Automated reminders for classes, announcements, and special offers.'
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -115,7 +192,9 @@ export default function FeaturesShowcase() {
                   <div className="bg-white rounded-2xl p-6 text-center">
                     <Smartphone className="h-32 w-32 text-blue-600 mx-auto mb-6" />
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">GymSlot Mobile</h3>
-                    <p className="text-gray-600 mb-4">Your gym in your members' pockets</p>
+                    <p className="text-gray-600 mb-4">
+                      {isCustomer ? 'Your gym in your pocket' : 'Your gym in your members\' pockets'}
+                    </p>
                     <Badge className="bg-green-100 text-green-700 border-green-200">
                       Available for iOS & Android
                     </Badge>
@@ -126,105 +205,110 @@ export default function FeaturesShowcase() {
           </div>
         </div>
 
-        {/* CRM Features */}
-        <div className="py-20 bg-white">
-          <div className="container mx-auto px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Powerful Member Management CRM
-              </h2>
-              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Everything you need to manage your members, track their journey, and grow your business.
-              </p>
+        {/* Only show CRM features for non-customers */}
+        {!isCustomer && (
+          <>
+            {/* CRM Features */}
+            <div className="py-20 bg-white">
+              <div className="container mx-auto px-8">
+                <div className="text-center mb-16">
+                  <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                    Powerful Member Management CRM
+                  </h2>
+                  <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                    Everything you need to manage your members, track their journey, and grow your business.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
+                    <CardHeader>
+                      <div className="h-12 w-12 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center mb-4">
+                        <Users className="h-6 w-6 text-white" />
+                      </div>
+                      <CardTitle className="text-xl">Member Profiles</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 mb-4">
+                        Detailed member profiles with contact information, membership history, and preferences.
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Contact & emergency information
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Medical notes & restrictions
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Membership status tracking
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
+                    <CardHeader>
+                      <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mb-4">
+                        <MessageSquare className="h-6 w-6 text-white" />
+                      </div>
+                      <CardTitle className="text-xl">Communication</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 mb-4">
+                        Automated email campaigns and personalized communication tools.
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Welcome email sequences
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Renewal reminders
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Custom announcements
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
+                    <CardHeader>
+                      <div className="h-12 w-12 bg-gradient-to-br from-green-600 to-teal-600 rounded-lg flex items-center justify-center mb-4">
+                        <Shield className="h-6 w-6 text-white" />
+                      </div>
+                      <CardTitle className="text-xl">Data Security</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 mb-4">
+                        Enterprise-grade security to protect your members' sensitive information.
+                      </p>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Encrypted data storage
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          GDPR compliant
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                          Regular security audits
+                        </li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
-                <CardHeader>
-                  <div className="h-12 w-12 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center mb-4">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">Member Profiles</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Detailed member profiles with contact information, membership history, and preferences.
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Contact & emergency information
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Medical notes & restrictions
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Membership status tracking
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
-                <CardHeader>
-                  <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mb-4">
-                    <MessageSquare className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">Communication</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Automated email campaigns and personalized communication tools.
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Welcome email sequences
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Renewal reminders
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Custom announcements
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-all">
-                <CardHeader>
-                  <div className="h-12 w-12 bg-gradient-to-br from-green-600 to-teal-600 rounded-lg flex items-center justify-center mb-4">
-                    <Shield className="h-6 w-6 text-white" />
-                  </div>
-                  <CardTitle className="text-xl">Data Security</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">
-                    Enterprise-grade security to protect your members' sensitive information.
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Encrypted data storage
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      GDPR compliant
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
-                      Regular security audits
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Class Management */}
         <div className="py-20 bg-gray-50">

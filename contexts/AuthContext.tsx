@@ -13,11 +13,15 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, or } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { UserCredential } from "firebase/auth"; 
+import { UserCredential } from "firebase/auth";
+import { getUserProfile } from '@/services/userService';
+import { UserProfile } from '@/models/UserProfile';
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
+  isStaffMember: boolean;
   signup: (email: string, password: string) => Promise<UserCredential>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -37,12 +41,32 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Helper function to check if user is a staff member
+  const isStaffMember = userProfile?.role ? 
+    ['owner', 'business-owner', 'staff', 'personal_trainer', 'administrator', 'manager', 'receptionist'].includes(userProfile.role) : 
+    false;
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
+      
+      if (user) {
+        try {
+          // Fetch user profile when user is authenticated
+          const profile = await getUserProfile(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setUserProfile(null);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      
       setLoading(false);
     });
 
@@ -57,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return userCredential;
   }
   
-  // Helper function to check if email belongs to any business (as owner, staff member, or customer)
+  // Helper function to check if email belongs to any business as a STAFF member (not customer)
   async function checkEmailBelongsToBusiness(email: string): Promise<boolean> {
     try {
       const businessesRef = collection(db, 'businesses');
@@ -71,17 +95,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return true;
         }
         
-        // Check if user is in staffMembers array
+        // Check if user is in staffMembers array (CRM access)
         const staffMembers = businessData.staffMembers || [];
         if (staffMembers.some((member: any) => member.email === email)) {
           return true;
         }
         
-        // Check if user is in members array (customers)
-        const members = businessData.members || [];
-        if (members.some((member: any) => member.email === email)) {
-          return true;
-        }
+        // DON'T check members array - customers should not access CRM
+        // They should only use the mobile app
       }
       
       return false;
@@ -99,11 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Reload user to get the latest verification status
     await user.reload();
 
-    // Check if email belongs to any business
+    // Check if email belongs to any business as a STAFF member (not customer)
     const emailBelongsToBusiness = await checkEmailBelongsToBusiness(email);
     if (!emailBelongsToBusiness) {
       await signOut(auth); // Prevent session from persisting
-      throw new Error("This email is not associated with any business. Please contact your business administrator.");
+      throw new Error("This email is not authorized to access the admin dashboard. If you're a customer, please use the mobile app to book classes.");
     }
   }
   
@@ -150,7 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
+    userProfile,
     loading,
+    isStaffMember,
     signup,
     login,
     logout,
