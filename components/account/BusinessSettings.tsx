@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Plus, X, Users, UserCheck, Building, FolderOpen, Loader2, Edit2, Key, U
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   getBusiness,
@@ -72,6 +72,7 @@ export default function BusinessSettings() {
   const [specialty, setSpecialty] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const staffListenerUnsubscribe = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -136,6 +137,60 @@ export default function BusinessSettings() {
       fetchBusinessData();
     }
   }, [user]);
+
+  // Real-time listener for staff account status
+  useEffect(() => {
+    if (staffMembers.length === 0) return;
+    // Clean up previous listener
+    if (staffListenerUnsubscribe.current) {
+      staffListenerUnsubscribe.current();
+      staffListenerUnsubscribe.current = null;
+    }
+    // Listen for changes to user accounts for all staff emails
+    const staffEmails = staffMembers.map((m) => m.email);
+    if (staffEmails.length === 0) return;
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "in", staffEmails.slice(0, 10)));
+    // Firestore 'in' queries are limited to 10 items, so chunk if needed
+    let unsubscribes: (() => void)[] = [];
+    const updateStaffFromSnapshot = (docs: any[]) => {
+      setStaffMembers((prev) =>
+        prev.map((member) => {
+          const userDoc = docs.find((d) => d.email === member.email);
+          if (userDoc) {
+            return {
+              ...member,
+              hasAccount: true,
+              firstName: userDoc.firstName || member.firstName,
+              lastName: userDoc.lastName || member.lastName,
+              phone: userDoc.phone || member.phone,
+            };
+          } else {
+            return {
+              ...member,
+              hasAccount: false,
+            };
+          }
+        })
+      );
+    };
+    // Chunk staffEmails for Firestore 'in' query limit
+    for (let i = 0; i < staffEmails.length; i += 10) {
+      const chunk = staffEmails.slice(i, i + 10);
+      const chunkQuery = query(usersRef, where("email", "in", chunk));
+      const unsubscribe = onSnapshot(chunkQuery, (snapshot) => {
+        const docs = snapshot.docs.map((doc) => doc.data());
+        updateStaffFromSnapshot(docs);
+      });
+      unsubscribes.push(unsubscribe);
+    }
+    staffListenerUnsubscribe.current = () => {
+      unsubscribes.forEach((u) => u());
+    };
+    return () => {
+      if (staffListenerUnsubscribe.current) staffListenerUnsubscribe.current();
+    };
+  }, [staffMembers.map((m) => m.email).join(",")]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
