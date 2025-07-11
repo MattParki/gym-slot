@@ -282,7 +282,10 @@ export async function POST(req) {
         // Send welcome email to new gym owners (not to users joining existing businesses)
         if (!businessId) {
           console.log(`Sending welcome email to new gym owner: ${email}`);
-          await sendWelcomeEmail(email);
+          const emailSent = await sendWelcomeEmail(email);
+          if (!emailSent) {
+            console.log(`⚠️ Welcome email failed to send to ${email}, but account creation was successful`);
+          }
         }
 
         return NextResponse.json({
